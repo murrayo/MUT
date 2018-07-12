@@ -8,8 +8,10 @@ As the title says. These tools are not supported, but suggestions, tips, fixes!,
 
 Current Python Version;
 
+```
 python --version
 Python 3.6.4 :: Anaconda custom (64-bit)
+```
 
 <hr>
 
