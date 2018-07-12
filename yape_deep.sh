@@ -29,11 +29,13 @@
 #        └── irisshard4_IRISQP3_20180704_054853_irisshard4_55_min.html
 #
 
-Usage="Usage: $0 [-d \"disk list\"]... "
+Usage="Usage: $0 [-d \"disk list\"] -w (windows default is linux)"
 
-while getopts d: o
+while getopts d:wh o
 do	case "$o" in
 	d)  intreasting_disks="$OPTARG" ;;
+    w)  Windows="Y" ;;  
+	h)  printf %s"${Usage}"; exit;;	
 	[?])	echo 
 	exit 1;;
 	esac
@@ -57,12 +59,14 @@ do	echo "File: ${f}"
 	
 	cd ${Directoryname} # We want output with the html file
 	    
-	yape -c --mgstat --vmstat --iostat --prefix "${fileName}_" --plotDisks "${intreasting_disks}" ${Filename}
+	if [[ "$Windows" != "" ]]; then   
+	    yape -c --mgstat --permon --prefix "${fileName}_" ${Filename}
+	else
+	    yape -c --mgstat --vmstat --iostat --prefix "${fileName}_" --plotDisks "${intreasting_disks}" ${Filename}
+	fi    
 	
 	cd "${CurrentFolder}"
 done
-
-
 
 # Put the csv files separate to for easy processing, all in one directory
 
@@ -75,16 +79,16 @@ done
 
 
 # Get disk files I am interested in
-
-for f in `find . -name *iostat*.png`
-do
-	Filename=`basename ${f}`
-	ServerName=`echo ${Filename} | awk -F_ '{print $1}'` # servername at start of file name
+if [[ "$Windows" == "" ]]; then 
+    for f in `find . -name *iostat*.png`
+    do
+	    Filename=`basename ${f}`
+	    ServerName=`echo ${Filename} | awk -F_ '{print $1}'` # servername at start of file name
 	
-    mkdir -p ${ServerName}"_disks"
+        mkdir -p ${ServerName}"_disks"
     
-    cp $f ${ServerName}"_disks"
-done
-
+        cp $f ${ServerName}"_disks"
+    done
+fi
 
 exit 0
