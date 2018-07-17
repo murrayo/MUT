@@ -41,6 +41,7 @@ do	case "$o" in
 	esac
 done
 
+ServerList = ""
 
 # Where are we now folder
 CurrentFolder=`pwd`
@@ -56,6 +57,8 @@ do	echo "File: ${f}"
 	echo "Processing directory: ${Directoryname} : ${Filename}"	
 	
 	fileName=`echo ${Filename} | awk -F. '{print $1}'`  # Drop the html for the prefix
+	ServerName=`echo ${Filename} | awk -F_ '{print $1}'` # servername at start of file name
+	ServerList="$ServerList $ServerName" 
 	
 	cd ${Directoryname} # We want output with the html file
 	    
@@ -74,21 +77,26 @@ mkdir -p csvfiles
     
 for f in `find . -name *.csv`
 do
-    cp $f csvfiles
+    cp $f csvfiles 2>/dev/null
 done
 
 
 # Get disk files I am interested in
 if [[ "$Windows" == "" ]]; then 
-    for f in `find . -name *iostat*.png`
-    do
-	    Filename=`basename ${f}`
-	    ServerName=`echo ${Filename} | awk -F_ '{print $1}'` # servername at start of file name
-	
-        mkdir -p ${ServerName}"_disks"
+
+    echo "Processing Servers: $ServerList"
     
-        cp $f ${ServerName}"_disks"
-    done
+    for i in $ServerList
+    do
+        mkdir -p ${i}"_disks"
+        echo "Disk : ${i}"
+        
+        for f in `find . -name "*_${i}_*iostat*.png"`
+        do
+            echo $f
+            cp $f ${i}"_disks" 2>/dev/null
+        done
+    done    
 fi
 
 exit 0
