@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# This script loops through multiple subdirectories to run yape and collate results
+# This script loops through multiple subdirectories to run yape and collates results
 # 
 # 
 # Useful for benchmarks especially 
@@ -35,7 +35,7 @@ while getopts d:wh o
 do	case "$o" in
 	d)  intreasting_disks="$OPTARG" ;;
     w)  Windows="Y" ;;  
-	h)  printf %s"${Usage}"; exit;;	
+	h)  printf %s"${Usage}\n"; exit;;	
 	[?])	echo 
 	exit 1;;
 	esac
