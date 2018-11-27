@@ -28,6 +28,9 @@ Many of the tools in this section are built to further process csv files output 
 `iris_combine_csv.py`
 - Build a master list of dataframes for each csv file. This is nice because you dont' care whether its 2 or 20. Then merge them (left inner) to create a single date+time indexed csv files with metrics across the row. If you have a 1 second tick on your vmstat and iostat etc then the merge will be OK, if you are using longer ticks like 5 or 10 seconds then there coulld be drift, so use iris\_resample\_csv.py to line up the times first (using the hammer).
 
+`TrakCare_Monitor.py`
+- Quickly process TrakCare Monitor Data to collate and visualise some interesting metrics. Source data must be exported from the TrakCare Monitor Tool using "ExportAll".
+
 
 ## Build docker image to run Python scripts
 

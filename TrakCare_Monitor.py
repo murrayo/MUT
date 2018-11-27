@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-# Quick process TrakCare Monitor Data to show good, bad, ugly
+# Quick process TrakCare Monitor Data to collate and visualise some interesting metrics
+# Source data must be exported from the TrakCare Monitor Tool
 
 # Example usage: TrakCare_Monitor.py -d directory
 #                Globals take a minute or so to process, explicitly request with -g 
@@ -351,16 +352,19 @@ def mainline(DIRECTORY, Do_Globals):
         df_ep_db = pd.merge(df_master_ep, df_db_by_date )
         df_ep_db["Episode Size MB"] = df_ep_db["Database Size MB"] / df_ep_db["EpisodeCountTotal"]
         
-        print('Days                 : '+'{v:,.0f}'.format(v=df_ep_db["Database Size MB"].count()) )        
-        print('Sum Database Growth  : '+'{v:,.0f}'.format(v=df_ep_db["Database Size MB"].sum())+' MB' )
-        print('Peak Database Growth : '+'{v:,.0f}'.format(v=df_ep_db["Database Size MB"].max())+' MB' )        
-        print('Database Growth/Day  : '+'{v:,.0f}'.format(v=df_ep_db["Database Size MB"].sum()/df_ep_db["Database Size MB"].count())+' MB' )
-        print('Sum Episodes         : '+'{v:,.0f}'.format(v=df_ep_db["EpisodeCountTotal"].sum()) )
-        print('Average Episodes/Day : '+'{v:,.0f}'.format(v=df_ep_db["EpisodeCountTotal"].mean()) )  
-        print('Peak Episodes/Day    : '+'{v:,.0f}'.format(v=df_ep_db["EpisodeCountTotal"].max()) )        
-        print('Est Episodes/year    : '+'{v:,.0f}'.format(v=df_ep_db["EpisodeCountTotal"].mean()*365) )       
-        print('Average Episode Size : '+'{v:,.2f}'.format(v=df_ep_db["Database Size MB"].sum()/df_ep_db["EpisodeCountTotal"].sum())+' MB' )
-        print('Mean    Episode Size : '+'{v:,.2f}'.format(v=df_ep_db["Episode Size MB"].mean())+' MB - Split the difference' )
+        # Print some useful stats
+        
+        with open( outputFile+'_Basic_Stats.txt', 'w') as f:
+            f.write('Days                 : '+'{v:,.0f}'.format(v=df_ep_db["Database Size MB"].count())+"\n")        
+            f.write('Sum Database Growth  : '+'{v:,.0f}'.format(v=df_ep_db["Database Size MB"].sum())+' MB\n')
+            f.write('Peak Database Growth : '+'{v:,.0f}'.format(v=df_ep_db["Database Size MB"].max())+' MB\n')        
+            f.write('Database Growth/Day  : '+'{v:,.0f}'.format(v=df_ep_db["Database Size MB"].sum()/df_ep_db["Database Size MB"].count())+' MB\n')
+            f.write('Sum Episodes         : '+'{v:,.0f}'.format(v=df_ep_db["EpisodeCountTotal"].sum())+"\n")
+            f.write('Average Episodes/Day : '+'{v:,.0f}'.format(v=df_ep_db["EpisodeCountTotal"].mean())+"\n")  
+            f.write('Peak Episodes/Day    : '+'{v:,.0f}'.format(v=df_ep_db["EpisodeCountTotal"].max())+"\n")        
+            f.write('Est Episodes/year    : '+'{v:,.0f}'.format(v=df_ep_db["EpisodeCountTotal"].mean()*365)+"\n")       
+            f.write('Average Episode Size : '+'{v:,.2f}'.format(v=df_ep_db["Database Size MB"].sum()/df_ep_db["EpisodeCountTotal"].sum())+' MB\n')
+            f.write('Mean    Episode Size : '+'{v:,.2f}'.format(v=df_ep_db["Episode Size MB"].mean())+' MB - Split the difference\n')
         
         df_ep_db.to_csv(outputFile+"Database_Growth.csv", sep=',', index=False)  
         
