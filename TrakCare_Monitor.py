@@ -32,7 +32,6 @@ def generic_plot(df, column, Title, yLabel, saveAs, pres=False):
         plt.ylabel(yLabel, fontsize=10)
         plt.tick_params(labelsize=10)       
         ax = plt.gca()
-#        ax.set_ylim(ymin=0)  # Always zero start
         if pres :
             ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.2f}'))
         else :
@@ -43,6 +42,7 @@ def generic_plot(df, column, Title, yLabel, saveAs, pres=False):
         plt.savefig(saveAs)
         plt.close()
 
+# Dont crowd the pie chart. To do; bucket 'Other' after 2pct
     
 def make_autopct(values):
     def my_autopct(pct):
@@ -63,7 +63,7 @@ def mainline(DIRECTORY, Do_Globals):
     MonitorPageSummaryName=glob.glob(DIRECTORY+'/*MonitorPageSummary.txt')   
     
     
-    # Top N values
+    # Top N values. To do; make parameters
     
     TopNDatabaseByGrowth    = 10
     TopNDatabaseByGrowthPie = 5
@@ -107,7 +107,7 @@ def mainline(DIRECTORY, Do_Globals):
         generic_plot(df_master_ep, 'EpisodeCountTotal', 'Total Episodes Per Day', 'Episodes per Day', outputFile+"_Ttl_Episodes.png" )
         generic_plot(df_master_ep, 'OrderCountTotal', 'Total Orders Per Day', 'Orders per Day', outputFile+"_Ttl_Orders.png" )
          
-        # Example of multiple charts, make this a function to accept any number of items
+        # Example of multiple charts. To do; Make this a function to accept any number of items
         
         plt.style.use('seaborn')
         plt.figure(num=None, figsize=(10, 6), dpi=80)
@@ -151,7 +151,7 @@ def mainline(DIRECTORY, Do_Globals):
                 
            
     # Databases  -------------------------------------------------------------------------
-    # Total by day and output full list, by day list, top 10 growth and chart top 10 growth
+    # Total by day and output full list, by day list, top n growth and chart top n growth
 
     for filename in MonitorDatabaseName:
     
@@ -180,7 +180,8 @@ def mainline(DIRECTORY, Do_Globals):
         generic_plot(df_master_db.groupby('Date').sum(), 'Database Size MB', 'Total All Database Size Per Day', '(MB)', outputFile+"_Ttl_Database_Size.png" )
         
         
-        # What are the high growth databases? Get database sizes, dont key by date as we will use this field
+        # What are the high growth databases in this period? 
+        # Get database sizes, dont key by date as we will use this field
 
         df_master_db = pd.read_csv(filename, sep='\t', encoding = "ISO-8859-1")
         df_master_db = df_master_db.dropna(axis=1, how='all')
@@ -325,7 +326,7 @@ def mainline(DIRECTORY, Do_Globals):
         plt.close()
         
         
-    # Average Episode size is good to know   
+    # Average Episode size is good to know  - Merge Episodes and Database growth (grouped by date) 
 
     for index in range( len(MonitorAppName)) :
 
@@ -337,22 +338,59 @@ def mainline(DIRECTORY, Do_Globals):
         df_master_db = df_master_db.dropna(axis=1, how='all')
         df_master_db = df_master_db.rename(columns = {'RunDate':'Date'})
         df_master_db['Database Size MB'] = df_master_db['SizeinMB'] - df_master_db['FreeSpace']
-        
+                        
         outputName = os.path.splitext(os.path.basename(MonitorAppName[index]))[0]
         outputFile = os.path.dirname(MonitorAppName[index])+"/000_"+outputName+"_Summary_EP_Size"      
         print("\nEpisode size: %s" % outputName)
+        
+        df_master_db.to_csv(outputFile+"Database_With_Docs.csv", sep=',', index=False) 
     
-
-        # Group by date, sum by date
+        # Group by date, sum by date, drop NaN
         df_db_by_date = df_master_db.groupby('Date').sum().diff().dropna() 
-        #df_db_by_date = df_db_by_date.shift(-1)
         
         df_db_by_date.reset_index(level=0, inplace=True) # Remove index for merge
 
         df_ep_db = pd.merge(df_master_ep, df_db_by_date )
         df_ep_db["Episode Size MB"] = df_ep_db["Database Size MB"] / df_ep_db["EpisodeCountTotal"]
+
+        df_ep_db.to_csv(outputFile+"Database_Growth.csv", sep=',', index=False)  
         
-        # Print some useful stats
+        AverageEpisodeSize = df_ep_db["Database Size MB"].sum()/df_ep_db["EpisodeCountTotal"].sum()
+        
+        df_ep_db['Date'] = pd.to_datetime(df_ep_db['Date'])
+        df_ep_db.set_index('Date', inplace=True)
+
+        generic_plot(df_ep_db, 'Episode Size MB', 'Average Growth per Episode per Day -- Overall average: '+'{v:,.2f}'.format(v=AverageEpisodeSize)+' MB', '(MB)', outputFile+"_Avg_Episodes"+str(index)+".png", True )      
+  
+        
+        # What about without Documents?  
+        df_master_db_nd = df_master_db[df_master_db.Name != 'TRAK-DOCS']
+        
+        outputName = os.path.splitext(os.path.basename(MonitorAppName[index]))[0]
+        outputFile = os.path.dirname(MonitorAppName[index])+"/000_"+outputName+"_Summary_EP_Size_No_Docs"      
+        print("\nEpisode size No Docs: %s" % outputName)
+        
+        df_master_db_nd.to_csv(outputFile+"Database_No_Docs.csv", sep=',', index=False) 
+    
+        # Group by date, sum by date, drop NaN
+        df_db_by_date_nd = df_master_db_nd.groupby('Date').sum().diff().dropna() 
+        
+        df_db_by_date_nd.reset_index(level=0, inplace=True) # Remove index for merge
+
+        df_ep_db_nd = pd.merge(df_master_ep, df_db_by_date_nd )
+        df_ep_db_nd["Episode Size MB"] = df_ep_db_nd["Database Size MB"] / df_ep_db_nd["EpisodeCountTotal"]
+
+        df_ep_db_nd.to_csv(outputFile+"Database_Growth_No_Docs.csv", sep=',', index=False)  
+        
+        AverageEpisodeSize_nd = df_ep_db_nd["Database Size MB"].sum()/df_ep_db_nd["EpisodeCountTotal"].sum()
+        
+        df_ep_db_nd['Date'] = pd.to_datetime(df_ep_db_nd['Date'])
+        df_ep_db_nd.set_index('Date', inplace=True)
+
+        generic_plot(df_ep_db_nd, 'Episode Size MB', 'Average Growth per Episode per Day -- No Documents average: '+'{v:,.2f}'.format(v=AverageEpisodeSize_nd)+' MB', '(MB)', outputFile+"_Avg_Episodes_No_Docs"+str(index)+".png", True )      
+        
+        
+        # Print some useful stats to txt file
         
         with open( outputFile+'_Basic_Stats.txt', 'w') as f:
             f.write('Days                 : '+'{v:,.0f}'.format(v=df_ep_db["Database Size MB"].count())+"\n")        
@@ -365,15 +403,9 @@ def mainline(DIRECTORY, Do_Globals):
             f.write('Est Episodes/year    : '+'{v:,.0f}'.format(v=df_ep_db["EpisodeCountTotal"].mean()*365)+"\n")       
             f.write('Average Episode Size : '+'{v:,.2f}'.format(v=df_ep_db["Database Size MB"].sum()/df_ep_db["EpisodeCountTotal"].sum())+' MB\n')
             f.write('Mean    Episode Size : '+'{v:,.2f}'.format(v=df_ep_db["Episode Size MB"].mean())+' MB - Split the difference\n')
+            f.write('Average Episode Size No Docs : '+'{v:,.2f}'.format(v=df_ep_db_nd["Database Size MB"].sum()/df_ep_db_nd["EpisodeCountTotal"].sum())+' MB\n')
+            f.write('Mean    Episode Size No Docs : '+'{v:,.2f}'.format(v=df_ep_db_nd["Episode Size MB"].mean())+' MB - Split the difference\n')
         
-        df_ep_db.to_csv(outputFile+"Database_Growth.csv", sep=',', index=False)  
-        
-        AverageEpisodeSize = df_ep_db["Database Size MB"].sum()/df_ep_db["EpisodeCountTotal"].sum()
-        
-        df_ep_db['Date'] = pd.to_datetime(df_ep_db['Date'])
-        df_ep_db.set_index('Date', inplace=True)
-
-        generic_plot(df_ep_db, 'Episode Size MB', 'Average Growth per Episode per Day -- Overall average: '+'{v:,.2f}'.format(v=AverageEpisodeSize)+' MB', '(MB)', outputFile+"_Avg_Episodes"+str(index)+".png", True )      
 
     # Globals - takes a while, explicitly run it with -g option -------------------------
     
