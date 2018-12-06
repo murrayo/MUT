@@ -23,15 +23,18 @@ import argparse
 
 # Generic plot by date, single line, ticks on a Monday.
 
-def generic_plot(df, column, Title, yLabel, saveAs, pres=False):
+def generic_plot(df, column, Title, yLabel, saveAs, pres=False, yzero=True):
 
         plt.style.use('seaborn')
         plt.figure(num=None, figsize=(10, 6), dpi=80)
         plt.plot(df[column])
         plt.title(Title, fontsize=14)
         plt.ylabel(yLabel, fontsize=10)
-        plt.tick_params(labelsize=10)       
+        plt.tick_params(labelsize=10)  
+    
         ax = plt.gca()
+        if yzero:
+                ax.set_ylim(ymin=0)  # Always zero start                
         if pres :
             ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.2f}'))
         else :
@@ -52,7 +55,7 @@ def make_autopct(values):
     return my_autopct
 
         
-def mainline(DIRECTORY, Do_Globals):
+def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
 
     # Get list of files in directory, can have multiples of same type if follow regex
     
@@ -99,7 +102,7 @@ def mainline(DIRECTORY, Do_Globals):
         df_day['Size'] = df_day['Size'].map('{:,.0f}'.format)
         df_day['Journal Size GB'] = df_day['Journal Size GB'].map('{:,.0f}'.format).astype(int)
     
-        generic_plot(df_day, 'Journal Size GB', 'Total Journal Size Per Day (GB)', 'GB per Day', outputFile_png+".png" )
+        generic_plot(df_day, 'Journal Size GB', 'Total Journal Size Per Day (GB)', 'GB per Day', outputFile_png+".png", False, True )
         df_day.to_csv(outputFile_csv+"_by_Day.csv", sep=',')
     
         
@@ -117,8 +120,8 @@ def mainline(DIRECTORY, Do_Globals):
         df_master_ep.index.names = ['Date']
         df_master_ep.to_csv(outputFile_csv+".csv", sep=',')
     
-        generic_plot(df_master_ep, 'EpisodeCountTotal', 'Total Episodes Per Day', 'Episodes per Day', outputFile_png+"_Ttl_Episodes.png" )
-        generic_plot(df_master_ep, 'OrderCountTotal', 'Total Orders Per Day', 'Orders per Day', outputFile_png+"_Ttl_Orders.png" )
+        generic_plot(df_master_ep, 'EpisodeCountTotal', 'Total Episodes Per Day', 'Episodes per Day', outputFile_png+"_Ttl_Episodes.png", False, True )
+        generic_plot(df_master_ep, 'OrderCountTotal', 'Total Orders Per Day', 'Orders per Day', outputFile_png+"_Ttl_Orders.png", False, True )
          
         # Example of multiple charts. To do; Make this a function to accept any number of items
         
@@ -182,7 +185,7 @@ def mainline(DIRECTORY, Do_Globals):
         df_master_db['Database Size MB'] = df_master_db['SizeinMB'] - df_master_db['FreeSpace']
         df_master_db.to_csv(outputFile_csv+"_by_date.csv", sep=',')
 
-        generic_plot(df_master_db.groupby('Date').sum(), 'Database Size MB', 'Total All Database Size Per Day', '(MB)', outputFile_png+"_Ttl_Database_Size.png" )
+        generic_plot(df_master_db.groupby('Date').sum(), 'Database Size MB', 'Total All Database Size Per Day', '(MB)', outputFile_png+"_Ttl_Database_Size.png", False, True )
         
         # What are the high growth databases in this period? 
         # Get database sizes, dont key by date as we will use this field
@@ -360,37 +363,44 @@ def mainline(DIRECTORY, Do_Globals):
         df_ep_db['Date'] = pd.to_datetime(df_ep_db['Date'])
         df_ep_db.set_index('Date', inplace=True)
 
-        generic_plot(df_ep_db, 'Episode Size MB', 'Average Growth per Episode per Day -- Overall average: '+'{v:,.2f}'.format(v=AverageEpisodeSize)+' MB', '(MB)', outputFile_png+"_Avg_Episodes"+str(index)+".png", True )      
+        generic_plot(df_ep_db, 'Episode Size MB', 'Average Growth per Episode per Day -- Overall average: '+'{v:,.2f}'.format(v=AverageEpisodeSize)+' MB', '(MB)', outputFile_png+"_Avg_Episodes"+str(index)+".png", True, False )      
   
         
         # What about without Documents?  
-        df_master_db_nd = df_master_db[df_master_db.Name != 'TRAK-DOCUMENT']
         
-        outputName = os.path.splitext(os.path.basename(MonitorAppName[index]))[0]
-        outputFile_png = DIRECTORY+"/all_out_png/"+outputName+"_Summary_EP_Size_No_Docs"  
-        outputFile_csv = DIRECTORY+"/all_out_csv/"+outputName+"_Summary_EP_Size_No_Docs"       
+        if TRAKDOCS != "" :
+        
+            print("TrakCare document database: %s" % TRAKDOCS)
+            df_master_db_nd = df_master_db[df_master_db.Name != TRAKDOCS]
+        
+            outputName = os.path.splitext(os.path.basename(MonitorAppName[index]))[0]
+            outputFile_png = DIRECTORY+"/all_out_png/"+outputName+"_Summary_EP_Size_No_Docs"  
+            outputFile_csv = DIRECTORY+"/all_out_csv/"+outputName+"_Summary_EP_Size_No_Docs"       
       
-        print("Episode size No Docs: %s" % outputName)
+            print("Episode size No Docs: %s" % outputName)
         
-        df_master_db_nd.to_csv(outputFile_csv+"Database_No_Docs.csv", sep=',', index=False) 
+            df_master_db_nd.to_csv(outputFile_csv+"Database_No_Docs.csv", sep=',', index=False) 
     
-        # Group by date, sum by date, drop NaN
-        df_db_by_date_nd = df_master_db_nd.groupby('Date').sum().diff().dropna() 
+            # Group by date, sum by date, drop NaN
+            df_db_by_date_nd = df_master_db_nd.groupby('Date').sum().diff().dropna() 
         
-        df_db_by_date_nd.reset_index(level=0, inplace=True) # Remove index for merge
+            df_db_by_date_nd.reset_index(level=0, inplace=True) # Remove index for merge
 
-        df_ep_db_nd = pd.merge(df_master_ep, df_db_by_date_nd )
-        df_ep_db_nd["Episode Size MB"] = df_ep_db_nd["Database Size MB"] / df_ep_db_nd["EpisodeCountTotal"]
+            df_ep_db_nd = pd.merge(df_master_ep, df_db_by_date_nd )
+            df_ep_db_nd["Episode Size MB"] = df_ep_db_nd["Database Size MB"] / df_ep_db_nd["EpisodeCountTotal"]
 
-        df_ep_db_nd.to_csv(outputFile_csv+"Database_Growth_No_Docs.csv", sep=',', index=False)  
+            df_ep_db_nd.to_csv(outputFile_csv+"Database_Growth_No_Docs.csv", sep=',', index=False)  
         
-        AverageEpisodeSize_nd = df_ep_db_nd["Database Size MB"].sum()/df_ep_db_nd["EpisodeCountTotal"].sum()
+            AverageEpisodeSize_nd = df_ep_db_nd["Database Size MB"].sum()/df_ep_db_nd["EpisodeCountTotal"].sum()
         
-        df_ep_db_nd['Date'] = pd.to_datetime(df_ep_db_nd['Date'])
-        df_ep_db_nd.set_index('Date', inplace=True)
+            df_ep_db_nd['Date'] = pd.to_datetime(df_ep_db_nd['Date'])
+            df_ep_db_nd.set_index('Date', inplace=True)
 
-        generic_plot(df_ep_db_nd, 'Episode Size MB', 'Average Growth per Episode per Day -- No Documents average: '+'{v:,.2f}'.format(v=AverageEpisodeSize_nd)+' MB', '(MB)', outputFile_png+"_Avg_Episodes_No_Docs"+str(index)+".png", True )      
+            generic_plot(df_ep_db_nd, 'Episode Size MB', 'Average Growth per Episode per Day -- No Documents average: '+'{v:,.2f}'.format(v=AverageEpisodeSize_nd)+' MB', '(MB)', outputFile_png+"_Avg_Episodes_No_Docs"+str(index)+".png", True, False )      
         
+        else:
+            print('TrakCare document database not defined - use -t "TRAK-DOCDBNAME" to calculate growth no docs')
+            
         # Print some useful stats to txt file
 
         with open( DIRECTORY+"/all_"+outputName+'_Basic_Stats.txt', 'w') as f:
@@ -404,8 +414,9 @@ def mainline(DIRECTORY, Do_Globals):
             f.write('Est Episodes/year              : '+'{v:,.0f}'.format(v=df_ep_db["EpisodeCountTotal"].mean()*365)+"\n")       
             f.write('Average Episode Size           : '+'{v:,.2f}'.format(v=df_ep_db["Database Size MB"].sum()/df_ep_db["EpisodeCountTotal"].sum())+' MB\n')
             f.write('Mean    Episode Size           : '+'{v:,.2f}'.format(v=df_ep_db["Episode Size MB"].mean())+' MB - Split the difference\n')
-            f.write('Average Episode Size No Docs   : '+'{v:,.2f}'.format(v=df_ep_db_nd["Database Size MB"].sum()/df_ep_db_nd["EpisodeCountTotal"].sum())+' MB\n')
-            f.write('Mean    Episode Size No Docs   : '+'{v:,.2f}'.format(v=df_ep_db_nd["Episode Size MB"].mean())+' MB - Split the difference\n')
+            if TRAKDOCS != "" :
+                f.write('Average Episode Size No Docs   : '+'{v:,.2f}'.format(v=df_ep_db_nd["Database Size MB"].sum()/df_ep_db_nd["EpisodeCountTotal"].sum())+' MB\n')
+                f.write('Mean    Episode Size No Docs   : '+'{v:,.2f}'.format(v=df_ep_db_nd["Episode Size MB"].mean())+' MB - Split the difference\n')
         
 
     # Globals - takes a while, explicitly run it with -g option -------------------------
@@ -529,7 +540,9 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="TrakCare Monitor Process")
     parser.add_argument("-d", "--directory", help="Directory with Monitor files", required=True)  
+    parser.add_argument("-t", "--trakdocs", help="TrakCare Documents database name") 
     parser.add_argument("-g", "--globals", help="Globals take a long time", action="store_true")      
+
     args = parser.parse_args()
    
     if args.directory is not None:
@@ -538,8 +551,13 @@ if __name__ == '__main__':
         print('Error: -d "Directory with Monitor files"')
         exit(0)
  
+    if args.trakdocs is not None:
+        TRAKDOCS = args.trakdocs
+    else:
+        TRAKDOCS = ""
+        
     try:
-         mainline(DIRECTORY, args.globals)       
+         mainline(DIRECTORY, TRAKDOCS, args.globals)       
     except OSError as e:
         print('Could not process files because: {}'.format(str(e)))
         
