@@ -53,7 +53,7 @@ def make_autopct(values):
         total = sum(values)
         val = int(round(pct*total/100000.0))
         return '{p:.0f}%  ({v:,d} GB)'.format(p=pct,v=val) if pct > 2 else ''
-    return my_autopct
+    return my_autopct    
 
 def average_episode_size(DIRECTORY, MonitorAppFile, MonitorDatabaseFile, TRAKDOCS, INCLUDE):
 
@@ -82,7 +82,7 @@ def average_episode_size(DIRECTORY, MonitorAppFile, MonitorDatabaseFile, TRAKDOC
 
     # Always exclude CACHETEMP
     df_master_db = df_master_db[df_master_db.Name != "CACHETEMP"]
-        
+           
     # If all databases including docs
     if TRAKDOCS == ["all"] :
         includew = ' with '
@@ -93,12 +93,12 @@ def average_episode_size(DIRECTORY, MonitorAppFile, MonitorDatabaseFile, TRAKDOC
         if INCLUDE:
             includew = ' only '
             df_master_db_dm = df_master_db[df_master_db['Name'].isin(TRAKDOCS)] 
-            outputFile_png_x = outputFile_png+"_Doc_Only.png"
+            outputFile_png_x = outputFile_png+"_"+'_'.join(TRAKDOCS)+"_Only.png"
         # All databases except document database    
         else:
             includew = ' without '
             df_master_db_dm = df_master_db[~df_master_db['Name'].isin(TRAKDOCS)] 
-            outputFile_png_x = outputFile_png+"_No_Doc.png" 
+            outputFile_png_x = outputFile_png+"_Not_"+'_'.join(TRAKDOCS)+".png" 
                 
     # Group databases by date, add column for growth per day, remove date index for merging
 
@@ -379,14 +379,17 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         df_temp = df_master_db.loc[df_master_db['Date'] == LastDay] 
 
         df_sorted = df_temp.sort_values(by=['Database Size MB'], ascending=False )
-        
-        TOTAL_ALL_DB=df_sorted['Database Size MB'].sum()/1000
 
+        Total_all_db=df_sorted['Database Size MB'].sum()
+        TOTAL_ALL_DB=Total_all_db/1000
+        
+        df_sorted["Labels"] = np.where(df_sorted['Database Size MB']*100/Total_all_db > 2, df_sorted['Name'], '')
+        
         plt.style.use('seaborn')
         plt.figure(num=None, figsize=(10, 6), dpi=80)
-        pie_exp = tuple(0.1 if i < 2 else 0 for i in range(df_sorted['Name'].count()))
+        pie_exp = tuple(0.1 if i < 2 else 0 for i in range(df_sorted['Name'].count())) # Pie explode 
         
-        plt.pie(df_sorted['Database Size MB'], labels = df_sorted['Name'], autopct=make_autopct(df_sorted['Database Size MB']), startangle=60, explode=pie_exp, shadow=True)
+        plt.pie(df_sorted['Database Size MB'], labels = df_sorted["Labels"], autopct=make_autopct(df_sorted['Database Size MB']), startangle=60, explode=pie_exp, shadow=True)
         plt.title('Top Database Sizes at '+str(LastDay)+' - Total '+'{v:,.0f}'.format(v=TOTAL_ALL_DB)+' GB' , fontsize=14)
         
         plt.axis('equal')
@@ -450,8 +453,13 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         if TRAKDOCS == [""] :
             print('TrakCare document database not defined - use -t "TRAK-DOCDBNAME" to calculate growth with/without docs')
         else:
+            for options in TRAKDOCS :
+                average_episode_size(DIRECTORY, MonitorAppName[index], MonitorDatabaseName[index], [options], True)
+                average_episode_size(DIRECTORY, MonitorAppName[index], MonitorDatabaseName[index], [options], False)
+                
             average_episode_size(DIRECTORY, MonitorAppName[index], MonitorDatabaseName[index], TRAKDOCS, True)
             average_episode_size(DIRECTORY, MonitorAppName[index], MonitorDatabaseName[index], TRAKDOCS, False)
+
 
     # Globals - takes a while, explicitly run it with -g option -------------------------
     
