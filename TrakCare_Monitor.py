@@ -3,8 +3,9 @@
 # Quick process TrakCare Monitor Data to collate and visualise some interesting metrics
 # Source data must be exported from the TrakCare Monitor Tool
 
-# Example usage: TrakCare_Monitor.py -d directory
+# Example usage: TrakCare_Monitor.py -d directory [-l list of databases to include/exclude from episode size] -g 
 #                Globals take a minute or so to process, explicitly request with -g 
+# example: TrakCare_Monitor.py -d SINO_monitor -l TRAK-DOCUMENT TRAK-MONITOR -g      
 
 import os
 import pandas as pd
@@ -81,9 +82,6 @@ def average_episode_size(DIRECTORY, MonitorAppFile, MonitorDatabaseFile, TRAKDOC
 
     # Always exclude CACHETEMP
     df_master_db = df_master_db[df_master_db.Name != "CACHETEMP"]
-
-    # Make a list, in future make able to pass a List eg include MONITOR and DOCUMENT
-    TRAKDOCS = [TRAKDOCS]
         
     # If all databases including docs
     if TRAKDOCS == ["all"] :
@@ -447,15 +445,13 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
     
         # Now plot the data
         
-        average_episode_size(DIRECTORY, MonitorAppName[index], MonitorDatabaseName[index], "all", True ) 
+        average_episode_size(DIRECTORY, MonitorAppName[index], MonitorDatabaseName[index], ["all"], True ) 
         
-        if TRAKDOCS == "" :
+        if TRAKDOCS == [""] :
             print('TrakCare document database not defined - use -t "TRAK-DOCDBNAME" to calculate growth with/without docs')
         else:
             average_episode_size(DIRECTORY, MonitorAppName[index], MonitorDatabaseName[index], TRAKDOCS, True)
             average_episode_size(DIRECTORY, MonitorAppName[index], MonitorDatabaseName[index], TRAKDOCS, False)
-
-                  
 
     # Globals - takes a while, explicitly run it with -g option -------------------------
     
@@ -578,8 +574,8 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="TrakCare Monitor Process")
     parser.add_argument("-d", "--directory", help="Directory with Monitor files", required=True)  
-    parser.add_argument("-t", "--trakdocs", help="TrakCare Documents database name") 
-    parser.add_argument("-g", "--globals", help="Globals take a long time", action="store_true")      
+    parser.add_argument("-l", "--listofDBs", nargs='+', help="TrakCare databases names to exclude from episode size") 
+    parser.add_argument("-g", "--globals", help="Globals take a long time", action="store_true")    
 
     args = parser.parse_args()
    
@@ -589,10 +585,10 @@ if __name__ == '__main__':
         print('Error: -d "Directory with Monitor files"')
         exit(0)
  
-    if args.trakdocs is not None:
-        TRAKDOCS = args.trakdocs
+    if args.listofDBs is not None:
+        TRAKDOCS = args.listofDBs
     else:
-        TRAKDOCS = ""
+        TRAKDOCS = [""] 
         
     try:
          mainline(DIRECTORY, TRAKDOCS, args.globals)       
