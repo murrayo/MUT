@@ -54,6 +54,119 @@ def make_autopct(values):
         return '{p:.0f}%  ({v:,d} GB)'.format(p=pct,v=val) if pct > 2 else ''
     return my_autopct
 
+def average_episode_size(DIRECTORY, MonitorAppFile, MonitorDatabaseFile, TRAKDOCS, INCLUDE):
+
+    # Get the data 
+    outputName = os.path.splitext(os.path.basename(MonitorAppFile))[0]
+    outputFile_png = DIRECTORY+"/all_out_png/"+outputName+"_Summary_EP_Size"  
+    outputFile_csv = DIRECTORY+"/all_out_csv/"+outputName+"_Summary_EP_Size"       
+    print("Episode size: %s" % outputName)
+
+    df_master_ep = pd.read_csv(MonitorAppFile, sep='\t', encoding = "ISO-8859-1")
+    df_master_ep = df_master_ep.dropna(axis=1, how='all') 
+    df_master_ep = df_master_ep.rename(columns = {'RunDate':'Date'})
+
+    # Cut down to just what we care about
+    df_master_ep = df_master_ep[['Date','RunTime','EpisodeCountTotal' ]]
+
+    df_master_db = pd.read_csv(MonitorDatabaseFile, sep='\t', encoding = "ISO-8859-1")
+    df_master_db = df_master_db.dropna(axis=1, how='all')
+    df_master_db = df_master_db.rename(columns = {'RunDate':'Date'})
+
+    # Calculate actual database used
+    df_master_db['DatabaseUsedMB'] = df_master_db['SizeinMB'] - df_master_db['FreeSpace']
+    df_master_db = df_master_db[['Date','DatabaseUsedMB', 'Name']]
+
+    df_master_db.to_csv(outputFile_csv+"Database_With_Docs.csv", sep=',', index=False)
+
+    # Always exclude CACHETEMP
+    df_master_db = df_master_db[df_master_db.Name != "CACHETEMP"]
+
+    # Make a list, in future make able to pass a List eg include MONITOR and DOCUMENT
+    TRAKDOCS = [TRAKDOCS]
+        
+    # If all databases including docs
+    if TRAKDOCS == ["all"] :
+        includew = ' with '
+        df_master_db_dm = df_master_db
+        outputFile_png_x = outputFile_png+"_All.png" 
+    else:        
+        # INCLUDE only the document database ? = True 
+        if INCLUDE:
+            includew = ' only '
+            df_master_db_dm = df_master_db[df_master_db['Name'].isin(TRAKDOCS)] 
+            outputFile_png_x = outputFile_png+"_Doc_Only.png"
+        # All databases except document database    
+        else:
+            includew = ' without '
+            df_master_db_dm = df_master_db[~df_master_db['Name'].isin(TRAKDOCS)] 
+            outputFile_png_x = outputFile_png+"_No_Doc.png" 
+                
+    # Group databases by date, add column for growth per day, remove date index for merging
+
+    df_db_by_date = df_master_db_dm.groupby('Date').sum()
+
+    df_db_by_date['DatabaseGrowthMB'] = df_db_by_date['DatabaseUsedMB'] - df_db_by_date['DatabaseUsedMB'].shift(1)
+    df_db_by_date = df_db_by_date[np.isfinite(df_db_by_date['DatabaseGrowthMB'])]
+    df_db_by_date.reset_index(level=0, inplace=True)
+
+    # Merge episodes and database growth on date, create column for daily plot
+
+    df_result = pd.merge(df_master_ep, df_db_by_date )
+    df_result["AvgEpisodeSizeMB"] = df_result["DatabaseGrowthMB"] / df_result["EpisodeCountTotal"]
+    df_result['Date'] = pd.to_datetime(df_result['Date'])
+    df_result.set_index('Date', inplace=True)
+
+    df_result.to_csv(outputFile_csv+"Database_Growth.csv", sep=',', index=False)
+
+    # Build the plot
+
+    DatabaseGrowthTotal = df_result.iloc[-1]['DatabaseUsedMB'] - df_result.iloc[0]['DatabaseUsedMB']
+    TotalEpisodes       = df_result['EpisodeCountTotal'].sum()
+    AverageEpisodeSize  = round(DatabaseGrowthTotal / TotalEpisodes,2)
+    TextString='Average growth/episode{}{}: {} MB'.format(includew,', '.join(TRAKDOCS), AverageEpisodeSize)
+
+    RunDateStart = df_result.head(1).index.tolist()
+    RunDateStart = RunDateStart[0].strftime('%d/%m/%Y')
+    RunDateEnd = df_result.tail(1).index.tolist()
+    RunDateEnd = RunDateEnd[0].strftime('%d/%m/%Y')
+
+    plt.style.use('seaborn')
+    plt.figure(num=None, figsize=(10, 6), dpi=80)
+    plt.plot(df_result['AvgEpisodeSizeMB'])
+    plt.title('Average Episode Size '+RunDateStart+' - '+RunDateEnd, fontsize=14)
+    plt.tick_params(labelsize=10)
+    ax = plt.gca()
+    ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.2f}'))    
+    ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%d/%m/%y - %H:%M'))
+    plt.ylabel("Average episode size (MB)", fontsize=10)
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
+    plt.text(0.01,.95,TextString, ha='left', va='center', transform=ax.transAxes, fontsize=12)
+    plt.tight_layout() 
+    plt.savefig(outputFile_png_x)
+    #plt.show()
+    plt.close()        
+    
+    # Print some useful stats to txt file
+    if TRAKDOCS == ["all"] :
+        with open( DIRECTORY+"/all_"+outputName+'_Basic_Stats.txt', 'w') as f:
+            f.write('Number of days data            : '+'{v:,.0f}'.format(v=df_result['DatabaseUsedMB'].count())+"\n")        
+            f.write('Sum database growth            : '+'{v:,.3f}'.format(v=df_result['DatabaseGrowthMB'].sum()/1000)+' GB\n')
+            f.write('Peak database growth/day       : '+'{v:,.3f}'.format(v=df_result['DatabaseGrowthMB'].max()/1000)+' GB\n')        
+            f.write('Average database growth/day    : '+'{v:,.3f}'.format(v=df_result['DatabaseGrowthMB'].sum()/1000/df_result['DatabaseGrowthMB'].count())+' GB\n\n')
+
+            f.write('Sum episodes                   : '+'{v:,.0f}'.format(v=df_result['EpisodeCountTotal'].sum())+"\n")
+            f.write('Average episodes/day           : '+'{v:,.0f}'.format(v=df_result['EpisodeCountTotal'].mean())+"\n")  
+            f.write('Peak episodes/day              : '+'{v:,.0f}'.format(v=df_result['EpisodeCountTotal'].max())+"\n")        
+            f.write('Estimated episodes/year        : '+'{v:,.0f}'.format(v=df_result['EpisodeCountTotal'].mean()*365)+"\n\n")       
+
+            f.write('Total database growth{0}{1} databases: {2:,.3f}'.format(includew, ', '.join(TRAKDOCS), DatabaseGrowthTotal/1000)+" GB\n")
+            f.write('Average growth/episode{0}{1} databases: {2:,.0f} KB (per episode size)'.format(includew, ', '.join(TRAKDOCS), AverageEpisodeSize*1000)+"\n")
+    else:
+        with open( DIRECTORY+"/all_"+outputName+'_Basic_Stats.txt', 'a') as f:
+            f.write('\nTotal database growth{0}{1}: {2:,.2f}'.format(includew, ', '.join(TRAKDOCS), DatabaseGrowthTotal/1000)+" GB\n")
+            f.write('Average growth/episode{0}{1}: {2:,.0f} KB (per episode size)'.format(includew, ', '.join(TRAKDOCS), AverageEpisodeSize*1000)+"\n")
         
 def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
 
@@ -331,93 +444,18 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
     # Average Episode size is good to know  - Merge Episodes and Database growth (grouped by date) 
 
     for index in range( len(MonitorAppName)) :
-
-        df_master_ep = pd.read_csv(MonitorAppName[index], sep='\t', encoding = "ISO-8859-1")
-        df_master_ep = df_master_ep.dropna(axis=1, how='all') 
-        df_master_ep = df_master_ep.rename(columns = {'RunDate':'Date'})
-
-        df_master_db = pd.read_csv(MonitorDatabaseName[index], sep='\t', encoding = "ISO-8859-1")
-        df_master_db = df_master_db.dropna(axis=1, how='all')
-        df_master_db = df_master_db.rename(columns = {'RunDate':'Date'})
-        df_master_db['Database Size MB'] = df_master_db['SizeinMB'] - df_master_db['FreeSpace']
-                        
-        outputName = os.path.splitext(os.path.basename(MonitorAppName[index]))[0]
-        outputFile_png = DIRECTORY+"/all_out_png/"+outputName+"_Summary_EP_Size"  
-        outputFile_csv = DIRECTORY+"/all_out_csv/"+outputName+"_Summary_EP_Size"       
-        print("Episode size: %s" % outputName)
-        
-        df_master_db.to_csv(outputFile_csv+"Database_With_Docs.csv", sep=',', index=False) 
     
-        # Group by date, sum by date, drop NaN
-        df_db_by_date = df_master_db.groupby('Date').sum().diff().dropna() 
+        # Now plot the data
         
-        df_db_by_date.reset_index(level=0, inplace=True) # Remove index for merge
-
-        df_ep_db = pd.merge(df_master_ep, df_db_by_date )
-        df_ep_db["Episode Size MB"] = df_ep_db["Database Size MB"] / df_ep_db["EpisodeCountTotal"]
-
-        df_ep_db.to_csv(outputFile_csv+"Database_Growth.csv", sep=',', index=False)  
+        average_episode_size(DIRECTORY, MonitorAppName[index], MonitorDatabaseName[index], "all", True ) 
         
-        AverageEpisodeSize = df_ep_db["Database Size MB"].sum()/df_ep_db["EpisodeCountTotal"].sum()
-        
-        df_ep_db['Date'] = pd.to_datetime(df_ep_db['Date'])
-        df_ep_db.set_index('Date', inplace=True)
-
-        generic_plot(df_ep_db, 'Episode Size MB', 'Average Growth per Episode per Day -- Overall average: '+'{v:,.2f}'.format(v=AverageEpisodeSize)+' MB', '(MB)', outputFile_png+"_Avg_Episodes"+str(index)+".png", True, False )      
-  
-        
-        # What about without Documents?  
-        
-        if TRAKDOCS != "" :
-        
-            print("TrakCare document database: %s" % TRAKDOCS)
-            df_master_db_nd = df_master_db[df_master_db.Name != TRAKDOCS]
-        
-            outputName = os.path.splitext(os.path.basename(MonitorAppName[index]))[0]
-            outputFile_png = DIRECTORY+"/all_out_png/"+outputName+"_Summary_EP_Size_No_Docs"  
-            outputFile_csv = DIRECTORY+"/all_out_csv/"+outputName+"_Summary_EP_Size_No_Docs"       
-      
-            print("Episode size No Docs: %s" % outputName)
-        
-            df_master_db_nd.to_csv(outputFile_csv+"Database_No_Docs.csv", sep=',', index=False) 
-    
-            # Group by date, sum by date, drop NaN
-            df_db_by_date_nd = df_master_db_nd.groupby('Date').sum().diff().dropna() 
-        
-            df_db_by_date_nd.reset_index(level=0, inplace=True) # Remove index for merge
-
-            df_ep_db_nd = pd.merge(df_master_ep, df_db_by_date_nd )
-            df_ep_db_nd["Episode Size MB"] = df_ep_db_nd["Database Size MB"] / df_ep_db_nd["EpisodeCountTotal"]
-
-            df_ep_db_nd.to_csv(outputFile_csv+"Database_Growth_No_Docs.csv", sep=',', index=False)  
-        
-            AverageEpisodeSize_nd = df_ep_db_nd["Database Size MB"].sum()/df_ep_db_nd["EpisodeCountTotal"].sum()
-        
-            df_ep_db_nd['Date'] = pd.to_datetime(df_ep_db_nd['Date'])
-            df_ep_db_nd.set_index('Date', inplace=True)
-
-            generic_plot(df_ep_db_nd, 'Episode Size MB', 'Average Growth per Episode per Day -- No Documents average: '+'{v:,.2f}'.format(v=AverageEpisodeSize_nd)+' MB', '(MB)', outputFile_png+"_Avg_Episodes_No_Docs"+str(index)+".png", True, False )      
-        
+        if TRAKDOCS == "" :
+            print('TrakCare document database not defined - use -t "TRAK-DOCDBNAME" to calculate growth with/without docs')
         else:
-            print('TrakCare document database not defined - use -t "TRAK-DOCDBNAME" to calculate growth no docs')
-            
-        # Print some useful stats to txt file
+            average_episode_size(DIRECTORY, MonitorAppName[index], MonitorDatabaseName[index], TRAKDOCS, True)
+            average_episode_size(DIRECTORY, MonitorAppName[index], MonitorDatabaseName[index], TRAKDOCS, False)
 
-        with open( DIRECTORY+"/all_"+outputName+'_Basic_Stats.txt', 'w') as f:
-            f.write('Days                           : '+'{v:,.0f}'.format(v=df_ep_db["Database Size MB"].count())+"\n")        
-            f.write('Sum Database Growth            : '+'{v:,.0f}'.format(v=df_ep_db["Database Size MB"].sum())+' MB\n')
-            f.write('Peak Database Growth           : '+'{v:,.0f}'.format(v=df_ep_db["Database Size MB"].max())+' MB\n')        
-            f.write('Database Growth/Day            : '+'{v:,.0f}'.format(v=df_ep_db["Database Size MB"].sum()/df_ep_db["Database Size MB"].count())+' MB\n')
-            f.write('Sum Episodes                   : '+'{v:,.0f}'.format(v=df_ep_db["EpisodeCountTotal"].sum())+"\n")
-            f.write('Average Episodes/Day           : '+'{v:,.0f}'.format(v=df_ep_db["EpisodeCountTotal"].mean())+"\n")  
-            f.write('Peak Episodes/Day              : '+'{v:,.0f}'.format(v=df_ep_db["EpisodeCountTotal"].max())+"\n")        
-            f.write('Est Episodes/year              : '+'{v:,.0f}'.format(v=df_ep_db["EpisodeCountTotal"].mean()*365)+"\n")       
-            f.write('Average Episode Size           : '+'{v:,.2f}'.format(v=df_ep_db["Database Size MB"].sum()/df_ep_db["EpisodeCountTotal"].sum())+' MB\n')
-            f.write('Mean    Episode Size           : '+'{v:,.2f}'.format(v=df_ep_db["Episode Size MB"].mean())+' MB - Split the difference\n')
-            if TRAKDOCS != "" :
-                f.write('Average Episode Size No Docs   : '+'{v:,.2f}'.format(v=df_ep_db_nd["Database Size MB"].sum()/df_ep_db_nd["EpisodeCountTotal"].sum())+' MB\n')
-                f.write('Mean    Episode Size No Docs   : '+'{v:,.2f}'.format(v=df_ep_db_nd["Episode Size MB"].mean())+' MB - Split the difference\n')
-        
+                  
 
     # Globals - takes a while, explicitly run it with -g option -------------------------
     
