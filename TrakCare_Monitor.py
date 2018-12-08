@@ -24,10 +24,10 @@ import argparse
 
 # Generic plot by date, single line, ticks on a Monday.
 
-def generic_plot(df, column, Title, yLabel, saveAs, pres=False, yzero=True):
+def generic_plot(df, column, Title, yLabel, saveAs, pres=False, yzero=True, TextString=""):
 
         plt.style.use('seaborn')
-        plt.figure(num=None, figsize=(10, 6), dpi=80)
+        plt.figure(num=None, figsize=(10, 6), dpi=300)
         plt.plot(df[column])
         plt.title(Title, fontsize=14)
         plt.ylabel(yLabel, fontsize=10)
@@ -42,8 +42,9 @@ def generic_plot(df, column, Title, yLabel, saveAs, pres=False, yzero=True):
             ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))    
         ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
         plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
+        plt.text(0.01,.95,TextString, ha='left', va='center', transform=ax.transAxes, fontsize=12)
         plt.tight_layout()        
-        plt.savefig(saveAs)
+        plt.savefig(saveAs, format='pdf')
         plt.close()
 
 # Dont crowd the pie chart. To do; bucket 'Other' after 2pct
@@ -57,10 +58,10 @@ def make_autopct(values):
 
 def average_episode_size(DIRECTORY, MonitorAppFile, MonitorDatabaseFile, TRAKDOCS, INCLUDE):
 
-    # Get the data 
-    outputName = os.path.splitext(os.path.basename(MonitorAppFile))[0]
-    outputFile_png = DIRECTORY+"/all_out_png/"+outputName+"_Summary_EP_Size"  
-    outputFile_csv = DIRECTORY+"/all_out_csv/"+outputName+"_Summary_EP_Size"       
+    # Get the episode data 
+    outputName = os.path.splitext(os.path.basename(MonitorDatabaseFile))[0]
+    outputFile_pdf = DIRECTORY+"/all_out_pdf/"+outputName+"_Summary"  
+    outputFile_csv = DIRECTORY+"/all_out_csv/"+outputName+"_Summary"       
     print("Episode size: %s" % outputName)
 
     df_master_ep = pd.read_csv(MonitorAppFile, sep='\t', encoding = "ISO-8859-1")
@@ -70,6 +71,7 @@ def average_episode_size(DIRECTORY, MonitorAppFile, MonitorDatabaseFile, TRAKDOC
     # Cut down to just what we care about
     df_master_ep = df_master_ep[['Date','RunTime','EpisodeCountTotal' ]]
 
+    # Get the database growth data
     df_master_db = pd.read_csv(MonitorDatabaseFile, sep='\t', encoding = "ISO-8859-1")
     df_master_db = df_master_db.dropna(axis=1, how='all')
     df_master_db = df_master_db.rename(columns = {'RunDate':'Date'})
@@ -87,21 +89,20 @@ def average_episode_size(DIRECTORY, MonitorAppFile, MonitorDatabaseFile, TRAKDOC
     if TRAKDOCS == ["all"] :
         includew = ' with '
         df_master_db_dm = df_master_db
-        outputFile_png_x = outputFile_png+"_All.png" 
+        outputFile_pdf_x = outputFile_pdf+"_All_EP_Size.pdf" 
     else:        
         # INCLUDE only the document database ? = True 
         if INCLUDE:
             includew = ' only '
             df_master_db_dm = df_master_db[df_master_db['Name'].isin(TRAKDOCS)] 
-            outputFile_png_x = outputFile_png+"_"+'_'.join(TRAKDOCS)+"_Only.png"
+            outputFile_pdf_x = outputFile_pdf+"_"+'_'.join(TRAKDOCS)+"_EP_Size.pdf"
         # All databases except document database    
         else:
             includew = ' without '
             df_master_db_dm = df_master_db[~df_master_db['Name'].isin(TRAKDOCS)] 
-            outputFile_png_x = outputFile_png+"_Not_"+'_'.join(TRAKDOCS)+".png" 
+            outputFile_pdf_x = outputFile_pdf+"_Not_"+'_'.join(TRAKDOCS)+"_EP_Size.pdf" 
                 
     # Group databases by date, add column for growth per day, remove date index for merging
-
     df_db_by_date = df_master_db_dm.groupby('Date').sum()
 
     df_db_by_date['DatabaseGrowthMB'] = df_db_by_date['DatabaseUsedMB'] - df_db_by_date['DatabaseUsedMB'].shift(1)
@@ -109,13 +110,13 @@ def average_episode_size(DIRECTORY, MonitorAppFile, MonitorDatabaseFile, TRAKDOC
     df_db_by_date.reset_index(level=0, inplace=True)
 
     # Merge episodes and database growth on date, create column for daily plot
-
     df_result = pd.merge(df_master_ep, df_db_by_date )
     df_result["AvgEpisodeSizeMB"] = df_result["DatabaseGrowthMB"] / df_result["EpisodeCountTotal"]
     df_result['Date'] = pd.to_datetime(df_result['Date'])
     df_result.set_index('Date', inplace=True)
-
-    df_result.to_csv(outputFile_csv+"Database_Growth.csv", sep=',', index=False)
+    
+    if TRAKDOCS == ["all"] :
+        df_result.to_csv(outputFile_csv+"Database_Growth.csv", sep=',', index=True )
 
     # Build the plot
 
@@ -142,17 +143,24 @@ def average_episode_size(DIRECTORY, MonitorAppFile, MonitorDatabaseFile, TRAKDOC
     plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
     plt.text(0.01,.95,TextString, ha='left', va='center', transform=ax.transAxes, fontsize=12)
     plt.tight_layout() 
-    plt.savefig(outputFile_png_x)
+    plt.savefig(outputFile_pdf_x, format='pdf')
     #plt.show()
     plt.close()        
     
-    # Print some useful stats to txt file
+    # Print some useful stats to txt file 
+    # Note on individual days there will be rounding errors of MBs 
+    #          - for totals use start and end figures where possible, eg end-start not growth_column.sum()
+    
     if TRAKDOCS == ["all"] :
         with open( DIRECTORY+"/all_"+outputName+'_Basic_Stats.txt', 'w') as f:
-            f.write('Number of days data            : '+'{v:,.0f}'.format(v=df_result['DatabaseUsedMB'].count())+"\n")        
-            f.write('Sum database growth            : '+'{v:,.3f}'.format(v=df_result['DatabaseGrowthMB'].sum()/1000)+' GB\n')
+            f.write('Number of days data            : '+'{v:,.0f}'.format(v=df_result['DatabaseUsedMB'].count())+"\n")      
+            f.write('Database size at start         : '+'{v:,.0f}'.format(v=df_result.iloc[0]['DatabaseUsedMB']/1000)+" GB\n") 
+            f.write('Database size at end           : '+'{v:,.0f}'.format(v=df_result.iloc[-1]['DatabaseUsedMB']/1000)+" GB\n")  
+                         
+            f.write('\nTotal database growth          : '+'{v:,.3f}'.format(v=DatabaseGrowthTotal/1000)+' GB\n')
             f.write('Peak database growth/day       : '+'{v:,.3f}'.format(v=df_result['DatabaseGrowthMB'].max()/1000)+' GB\n')        
-            f.write('Average database growth/day    : '+'{v:,.3f}'.format(v=df_result['DatabaseGrowthMB'].sum()/1000/df_result['DatabaseGrowthMB'].count())+' GB\n\n')
+            f.write('Average database growth/day    : '+'{v:,.3f}'.format(v=(DatabaseGrowthTotal/1000)/df_result['DatabaseGrowthMB'].count())+' GB\n')
+            f.write('Estimated database growth/year : '+'{v:,.0f}'.format(v=((DatabaseGrowthTotal/1000)/df_result['DatabaseGrowthMB'].count())*365)+' GB\n\n')
 
             f.write('Sum episodes                   : '+'{v:,.0f}'.format(v=df_result['EpisodeCountTotal'].sum())+"\n")
             f.write('Average episodes/day           : '+'{v:,.0f}'.format(v=df_result['EpisodeCountTotal'].mean())+"\n")  
@@ -161,35 +169,50 @@ def average_episode_size(DIRECTORY, MonitorAppFile, MonitorDatabaseFile, TRAKDOC
 
             f.write('Total database growth{0}{1} databases: {2:,.3f}'.format(includew, ', '.join(TRAKDOCS), DatabaseGrowthTotal/1000)+" GB\n")
             f.write('Average growth/episode{0}{1} databases: {2:,.0f} KB (per episode size)'.format(includew, ', '.join(TRAKDOCS), AverageEpisodeSize*1000)+"\n")
+            
+            TextString = 'Database size at end : '+'{v:,.0f}'.format(v=df_result.iloc[-1]['DatabaseUsedMB']/1000)+" GB\n"
+            generic_plot(df_result, 'DatabaseUsedMB', 'Total Database Size (MB)  '+RunDateStart+' to '+RunDateEnd, 'MB', outputFile_pdf+"_All_Total.pdf", False, True, TextString )
+            TextString = 'Average database growth/day : '+'{v:,.3f}'.format(v=DatabaseGrowthTotal/1000/df_result['DatabaseGrowthMB'].count())+' GB'
+            generic_plot(df_result, 'DatabaseGrowthMB', 'Database Growth per Day (MB)  '+RunDateStart+' to '+RunDateEnd, 'MB', outputFile_pdf+"_All_Growth.pdf", False, True, TextString  )
     else:
         with open( DIRECTORY+"/all_"+outputName+'_Basic_Stats.txt', 'a') as f:
             f.write('\nTotal database growth{0}{1}: {2:,.2f}'.format(includew, ', '.join(TRAKDOCS), DatabaseGrowthTotal/1000)+" GB\n")
             f.write('Average growth/episode{0}{1}: {2:,.0f} KB (per episode size)'.format(includew, ', '.join(TRAKDOCS), AverageEpisodeSize*1000)+"\n")
+            
+            ChartTitle = 'Total Database Size (MB)'+includew+', '.join(TRAKDOCS)+' '+RunDateStart+' to '+RunDateEnd
+            if INCLUDE:
+                outputFile_pdf_y = outputFile_pdf+'_'+'_'.join(TRAKDOCS)+"_Total.pdf"
+            else:
+                outputFile_pdf_y = outputFile_pdf+'_Not_'+'_'.join(TRAKDOCS)+"_Total.pdf"
+            TextString = 'Database size at end : '+'{v:,.0f}'.format(v=df_result.iloc[-1]['DatabaseUsedMB']/1000)+" GB"    
+            generic_plot(df_result, 'DatabaseUsedMB', ChartTitle, "MB", outputFile_pdf_y, False, True, TextString )
+            
+            ChartTitle = 'Database Growth per Day'+includew+', '.join(TRAKDOCS)+' '+RunDateStart+' to '+RunDateEnd
+            if INCLUDE:
+                outputFile_pdf_y = outputFile_pdf+'_'+'_'.join(TRAKDOCS)+"_Growth.pdf"
+            else:
+                outputFile_pdf_y = outputFile_pdf+'_Not_'+'_'.join(TRAKDOCS)+"_Growth.pdf" 
+            TextString = 'Average database growth/day : '+'{v:,.3f}'.format(v=DatabaseGrowthTotal/1000/df_result['DatabaseGrowthMB'].count())+' GB'              
+            generic_plot(df_result, 'DatabaseGrowthMB', ChartTitle, "MB", outputFile_pdf_y, False, True, TextString  )
         
 def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
 
-    # Get list of files in directory, can have multiples of same type if follow regex
+    # Top N values. To do; make parameters
+    TopNDatabaseByGrowth    = 10
+    TopNDatabaseByGrowthPie = 5
     
+    # Get list of files in directory, can have multiples of same type if follow regex
     MonitorAppName=glob.glob(DIRECTORY+'/*MonitorApp.txt')
     MonitorDatabaseName=glob.glob(DIRECTORY+'/*MonitorDatabase.txt')
     MonitorGlobalsName=glob.glob(DIRECTORY+'/*MonitorGlobals.txt')   
     MonitorJournalsName=glob.glob(DIRECTORY+'/*MonitorJournals.txt')     
     MonitorPageSummaryName=glob.glob(DIRECTORY+'/*MonitorPageSummary.txt')   
     
-    
-    # Top N values. To do; make parameters
-    
-    TopNDatabaseByGrowth    = 10
-    TopNDatabaseByGrowthPie = 5
-    
-    # Create directories for generated csv and png files
-    
-    if not os.path.exists(DIRECTORY+"/all_out_png"):
-        os.mkdir(DIRECTORY+"/all_out_png")
-
+    # Create directories for generated csv and pdf files
+    if not os.path.exists(DIRECTORY+"/all_out_pdf"):
+        os.mkdir(DIRECTORY+"/all_out_pdf")
     if not os.path.exists(DIRECTORY+"/all_out_csv"):
         os.mkdir(DIRECTORY+"/all_out_csv")
-
     if not os.path.exists(DIRECTORY+"/all_database"):
         os.mkdir(DIRECTORY+"/all_database")
                
@@ -198,8 +221,8 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
     
     for filename in MonitorJournalsName :
         outputName = os.path.splitext(os.path.basename(filename))[0]
-        outputFile_png = DIRECTORY+"/all_out_png/"+outputName+"_Summary"  
-        outputFile_csv = DIRECTORY+"/all_out_csv/"+outputName+"_Summary"     
+        outputFile_pdf = DIRECTORY+"/all_out_pdf/"+outputName  
+        outputFile_csv = DIRECTORY+"/all_out_csv/"+outputName     
         print("Journals: %s" % outputName)
     
         df_master = pd.read_csv(filename, sep='\t', encoding = "ISO-8859-1", parse_dates=[0], index_col=0)
@@ -207,13 +230,24 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         
         df_master.index.names = ['Date']        
         df_master.to_csv(outputFile_csv+".csv", sep=',')
-
+        
+        # Lets get the start and end dates to display 
+        #                                              - use for all titles
+        
+        RunDateStart = df_master.head(1).index.tolist()
+        RunDateStart = RunDateStart[0].strftime('%d/%m/%Y')
+        RunDateEnd = df_master.tail(1).index.tolist()
+        RunDateEnd = RunDateEnd[0].strftime('%d/%m/%Y')
+        TITLEDATES = RunDateStart+' to '+RunDateEnd
+        
         df_day = df_master.groupby('Date').sum()
         df_day['Journal Size GB'] = df_day['Size']/1000000000
         df_day['Size'] = df_day['Size'].map('{:,.0f}'.format)
         df_day['Journal Size GB'] = df_day['Journal Size GB'].map('{:,.0f}'.format).astype(int)
     
-        generic_plot(df_day, 'Journal Size GB', 'Total Journal Size Per Day (GB)', 'GB per Day', outputFile_png+".png", False, True )
+        TextString = 'Average Journals/day : '+'{v:,.0f}'.format(v=df_day['Journal Size GB'].mean())+' GB' 
+        TextString = TextString+', Peak Journals/day : '+'{v:,.0f}'.format(v=df_day['Journal Size GB'].max())+' GB'
+        generic_plot(df_day, 'Journal Size GB', 'Total Journal Size Per Day (GB)  '+TITLEDATES, 'GB per Day', outputFile_pdf+".pdf", False, True, TextString )
         df_day.to_csv(outputFile_csv+"_by_Day.csv", sep=',')
     
         
@@ -222,8 +256,8 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
     
     for filename in MonitorAppName :
         outputName = os.path.splitext(os.path.basename(filename))[0]
-        outputFile_png = DIRECTORY+"/all_out_png/"+outputName+"_Summary"  
-        outputFile_csv = DIRECTORY+"/all_out_csv/"+outputName+"_Summary"           
+        outputFile_pdf = DIRECTORY+"/all_out_pdf/"+outputName 
+        outputFile_csv = DIRECTORY+"/all_out_csv/"+outputName           
         print("Episodes: %s" % outputName)
     
         df_master_ep = pd.read_csv(filename, sep='\t', encoding = "ISO-8859-1", parse_dates=[0], index_col=0)
@@ -231,8 +265,12 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         df_master_ep.index.names = ['Date']
         df_master_ep.to_csv(outputFile_csv+".csv", sep=',')
     
-        generic_plot(df_master_ep, 'EpisodeCountTotal', 'Total Episodes Per Day', 'Episodes per Day', outputFile_png+"_Ttl_Episodes.png", False, True )
-        generic_plot(df_master_ep, 'OrderCountTotal', 'Total Orders Per Day', 'Orders per Day', outputFile_png+"_Ttl_Orders.png", False, True )
+        TextString = 'Average Episodes/day : '+'{v:,.0f}'.format(v=df_master_ep['EpisodeCountTotal'].mean()) 
+        TextString = TextString+', Peak Episodes/day : '+'{v:,.0f}'.format(v=df_master_ep['EpisodeCountTotal'].max())  
+        TextString = TextString+', Est Episodes/year : '+'{v:,.0f}'.format(v=df_master_ep['EpisodeCountTotal'].mean()*365) 
+        
+        generic_plot(df_master_ep, 'EpisodeCountTotal', 'Total Episodes Per Day  '+TITLEDATES, 'Episodes per Day', outputFile_pdf+"_Ttl_Episodes.pdf", False, True, TextString )
+        generic_plot(df_master_ep, 'OrderCountTotal', 'Total Orders Per Day  '+TITLEDATES, 'Orders per Day', outputFile_pdf+"_Ttl_Orders.pdf", False, True )
          
         # Example of multiple charts. To do; Make this a function to accept any number of items
         
@@ -243,7 +281,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         plt.plot(df_master_ep['OrderCountTotal'], label='Total Orders Per Day')
         plt.legend(loc='best')
         
-        plt.title('Episodes and Orders by Day', fontsize=14)
+        plt.title('Episodes and Orders by Day  '+TITLEDATES, fontsize=14)
         plt.ylabel('Count', fontsize=10)
         plt.tick_params(labelsize=10)       
         ax = plt.gca()
@@ -252,7 +290,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
         plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
         plt.tight_layout()
-        plt.savefig(outputFile_png+"_Episodes_Orders.png")
+        plt.savefig(outputFile_pdf+"_Ttl_Episodes_Orders.pdf", format='pdf')
         plt.close()        
 
         #plt.style.use('seaborn')
@@ -273,7 +311,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         #ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
         #plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
         #plt.tight_layout()
-        #plt.savefig(outputFile_png+"_All_Episodes.png")
+        #plt.savefig(outputFile_pdf+"_All_Episodes.pdf")
         #plt.close()       
                 
            
@@ -283,20 +321,33 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
     for filename in MonitorDatabaseName:
     
         outputName = os.path.splitext(os.path.basename(filename))[0]
-        outputFile_png = DIRECTORY+"/all_out_png/"+outputName+"_Summary"  
+        outputFile_pdf = DIRECTORY+"/all_out_pdf/"+outputName+"_Summary"  
         outputFile_csv = DIRECTORY+"/all_out_csv/"+outputName+"_Summary"             
         print("Databases: %s" % outputName)
     
-        # What is the total size of all databases?
+        # What is the total size of all databases? includes CACHETEMP
         
         df_master_db = pd.read_csv(filename, sep='\t', encoding = "ISO-8859-1", parse_dates=[0], index_col=0)
         df_master_db = df_master_db.dropna(axis=1, how='all') 
-        
-        df_master_db.index.names = ['Date']        
-        df_master_db['Database Size MB'] = df_master_db['SizeinMB'] - df_master_db['FreeSpace']
-        df_master_db.to_csv(outputFile_csv+"_by_date.csv", sep=',')
 
-        generic_plot(df_master_db.groupby('Date').sum(), 'Database Size MB', 'Total All Database Size Per Day', '(MB)', outputFile_png+"_Ttl_Database_Size.png", False, True )
+        df_master_db.index.names = ['Date']        
+        df_master_db['DatabaseUsedMB'] = df_master_db['SizeinMB'] - df_master_db['FreeSpace']
+        
+        df_db_by_date = df_master_db.groupby('Date').sum()
+
+        df_master_db.to_csv(outputFile_csv+"_Size.csv", sep=',')
+        df_db_by_date.to_csv(outputFile_csv+"_Size_by_date.csv", sep=',')
+
+        # Data growth 
+        TextString = 'Database size used at end : '+'{v:,.0f}'.format(v=df_db_by_date.iloc[-1]['DatabaseUsedMB']/1000)+" GB (includes CACHETEMP)\n"
+        generic_plot(df_db_by_date, 'DatabaseUsedMB', 'Total Database Used  '+TITLEDATES, '(MB)', outputFile_pdf+"_Ttl_Database_Used.pdf", False, True, TextString )
+        
+        # Actual usage on disk
+        TextString = 'Database size on disk (inc Freespace) at end : '+'{v:,.0f}'.format(v=df_db_by_date.iloc[-1]['SizeinMB']/1000)+" GB (includes CACHETEMP)\n"
+        generic_plot(df_db_by_date, 'SizeinMB', 'Total Database Size on Disk  '+TITLEDATES, '(MB)', outputFile_pdf+"_Ttl_Database_Size_On_Disk.pdf", False, True, TextString )
+        
+        TextString = 'Database free at end : '+'{v:,.0f}'.format(v=df_db_by_date.iloc[-1]['FreeSpace']/1000)+" GB (includes CACHETEMP)\n"
+        generic_plot(df_db_by_date, 'FreeSpace', 'Total Database Freespace on Disk  '+TITLEDATES, '(MB)', outputFile_pdf+"_Ttl_Database_Free.pdf", False, True, TextString )
         
         # What are the high growth databases in this period? 
         # Get database sizes, dont key by date as we will use this field
@@ -304,49 +355,45 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         df_master_db = pd.read_csv(filename, sep='\t', encoding = "ISO-8859-1")
         df_master_db = df_master_db.dropna(axis=1, how='all')
         df_master_db = df_master_db.rename(columns = {'RunDate':'Date'})
-        df_master_db['Database Size MB'] = df_master_db['SizeinMB'] - df_master_db['FreeSpace']
+        df_master_db['DatabaseUsedMB'] = df_master_db['SizeinMB'] - df_master_db['FreeSpace']
 
         # create a new file per database for later deep dive if needed
-        
         df_databases = pd.DataFrame({'Name':df_master_db.Name.unique()}) # Get unique database names
         
         cols = ['Database', 'Start MB', 'End MB' ,'Growth MB']
         lst = []
         for index, row in df_databases.iterrows():
             df_temp = df_master_db.loc[df_master_db['Name'] == row['Name']].iloc[[0, -1]]   
-            lst.append([row['Name'],df_temp['Database Size MB'].iloc[0],df_temp['Database Size MB'].iloc[1],df_temp['Database Size MB'].iloc[1] - df_temp['Database Size MB'].iloc[0]])
+            lst.append([row['Name'],df_temp['DatabaseUsedMB'].iloc[0],df_temp['DatabaseUsedMB'].iloc[1],df_temp['DatabaseUsedMB'].iloc[1] - df_temp['DatabaseUsedMB'].iloc[0]])
             df_master_db.loc[df_master_db['Name'] == row['Name']].to_csv(DIRECTORY+"/all_database/Database_"+row['Name']+".csv", sep=',', index=False)    
 
-        # Lets see growth over sample period in some charts
-                
+        # Lets see growth over sample period in some charts    
         df_out = pd.DataFrame(lst, columns=cols).sort_values(by=['Growth MB'], ascending=False)                    
         df_out.to_csv(outputFile_csv+".csv", sep=',', index=False)  
         
         # What are the top N databses by growth? df_out will hold the sorted list
-        
         df_out.head(TopNDatabaseByGrowth).to_csv(outputFile_csv+"_top_"+str(TopNDatabaseByGrowth)+".csv", sep=',', index=False)
         
-        # Bar chart top N Total Growth
-
+        # Bar chart - top N Total Growth
         plt.style.use('seaborn')
         plt.figure(num=None, figsize=(10, 6), dpi=80)
         index = np.arange(len(df_out['Database'].head(TopNDatabaseByGrowth)))
         
-        # df_out 
+        # df_out
         plt.barh(df_out['Database'].head(TopNDatabaseByGrowth), df_out['Growth MB'].head(10))
 
-        plt.title('Top '+str(TopNDatabaseByGrowth)+' - Database Growth', fontsize=14)
+        plt.title('Top '+str(TopNDatabaseByGrowth)+' - Database Growth  '+TITLEDATES, fontsize=14)
         plt.xlabel('Growth over period (MB)', fontsize=10)
         plt.tick_params(labelsize=10)  
         plt.yticks(index, df_out['Database'].head(TopNDatabaseByGrowth), fontsize=10)
         ax = plt.gca()
         ax.xaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
         plt.tight_layout()
-        plt.savefig(outputFile_png+"_Top_"+str(TopNDatabaseByGrowth)+"_Bar.png")
+        plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowth)+"_Bar.pdf", format='pdf')
         plt.close()     
         
-        # Growth of top n databases over time
-
+        
+        # Growth of top n databases over time (not stacked)
         df_master_db['Date'] = pd.to_datetime(df_master_db['Date']) # Convert text field to date time
         
         top_List = df_out['Database'].head(TopNDatabaseByGrowthPie).tolist()
@@ -357,9 +404,9 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
             
         for name, data in grpd:        
             if name in top_List:        
-               plt.plot(data.Date.values, data.SizeinMB.values, '-', label = name)
+                plt.plot(data.Date.values, data.DatabaseUsedMB.values, '-', label = name)
                 
-        plt.title('Top Growth Databases Over Period (Not Stacked)', fontsize=14)
+        plt.title('Top Growth Databases (Not Stacked)  '+TITLEDATES, fontsize=14)
         plt.ylabel('MB', fontsize=10)
         plt.tick_params(labelsize=10) 
         plt.legend(loc='upper left')      
@@ -369,32 +416,35 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
         plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
         plt.tight_layout()
-        plt.savefig(outputFile_png+"_Top_"+str(TopNDatabaseByGrowthPie)+"_Growth_Time.png")
+        plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowthPie)+"_Growth_Time.pdf", format='pdf')
         plt.close()               
 
-
-        # Pie chart like Dave's to show relative sizes, Last day of sample period
         
+        # Pie chart like Dave's to show relative sizes, Last day of sample period
         LastDay=df_master_db['Date'].iloc[-1]
         df_temp = df_master_db.loc[df_master_db['Date'] == LastDay] 
 
-        df_sorted = df_temp.sort_values(by=['Database Size MB'], ascending=False )
+        df_sorted = df_temp.sort_values(by=['DatabaseUsedMB'], ascending=False )
+        df_sorted.to_csv(outputFile_csv+"_pie.csv", sep=',', index=False)
+        
+        # Drop rows with unmounted databases - size shows up as NaN
+        # df_sorted = df_sorted.dropna() <--- cant use this drops too much
 
-        Total_all_db=df_sorted['Database Size MB'].sum()
+        Total_all_db=df_sorted['DatabaseUsedMB'].sum()
         TOTAL_ALL_DB=Total_all_db/1000
         
-        df_sorted["Labels"] = np.where(df_sorted['Database Size MB']*100/Total_all_db > 2, df_sorted['Name'], '')
+        df_sorted["Labels"] = np.where(df_sorted['DatabaseUsedMB']*100/Total_all_db > 2, df_sorted['Name'], '')
         
         plt.style.use('seaborn')
         plt.figure(num=None, figsize=(10, 6), dpi=80)
         pie_exp = tuple(0.1 if i < 2 else 0 for i in range(df_sorted['Name'].count())) # Pie explode 
         
-        plt.pie(df_sorted['Database Size MB'], labels = df_sorted["Labels"], autopct=make_autopct(df_sorted['Database Size MB']), startangle=60, explode=pie_exp, shadow=True)
+        plt.pie(df_sorted['DatabaseUsedMB'], labels = df_sorted["Labels"], autopct=make_autopct(df_sorted['DatabaseUsedMB']), startangle=60, explode=pie_exp, shadow=True)
         plt.title('Top Database Sizes at '+str(LastDay)+' - Total '+'{v:,.0f}'.format(v=TOTAL_ALL_DB)+' GB' , fontsize=14)
         
         plt.axis('equal')
         plt.tight_layout()
-        plt.savefig(outputFile_png+"_Total_DB_Size_Pie.png")
+        plt.savefig(outputFile_pdf+"_Total_DB_Size_Pie.pdf")
         plt.close()
 
 
@@ -413,7 +463,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         for i in top_List:
             df_A = df_top_List[df_top_List['Name'] == i]
             listName = i.replace('-', '_') # Dashes screw with Python    
-            Lists[listName] = df_A['Database Size MB'].tolist()
+            Lists[listName] = df_A['DatabaseUsedMB'].tolist()
         
         all_keys=[]
         all_items=[]
@@ -427,7 +477,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
 
         plt.stackplot(dates, all_items, labels=all_keys, colors=pal, alpha=0.5)
 
-        plt.title('Top '+str(TopNDatabaseByGrowthPie)+' - Database Growth', fontsize=14)
+        plt.title('Top '+str(TopNDatabaseByGrowthPie)+' - Database Growth  '+TITLEDATES, fontsize=14)
         plt.ylabel('MB', fontsize=10)
         plt.tick_params(labelsize=10)  
         ax = plt.gca()
@@ -438,7 +488,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         plt.tight_layout()
         plt.legend(loc='upper left')    
         
-        plt.savefig(outputFile_png+"_Top_"+str(TopNDatabaseByGrowthPie)+"_Growth_Time_Stack.png")
+        plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowthPie)+"_Growth_Time_Stack.pdf", format='pdf')
         plt.close()
         
         
@@ -453,9 +503,10 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         if TRAKDOCS == [""] :
             print('TrakCare document database not defined - use -t "TRAK-DOCDBNAME" to calculate growth with/without docs')
         else:
-            for options in TRAKDOCS :
-                average_episode_size(DIRECTORY, MonitorAppName[index], MonitorDatabaseName[index], [options], True)
-                average_episode_size(DIRECTORY, MonitorAppName[index], MonitorDatabaseName[index], [options], False)
+            if len(TRAKDOCS) > 1 :
+                for options in TRAKDOCS :
+                    average_episode_size(DIRECTORY, MonitorAppName[index], MonitorDatabaseName[index], [options], True)
+                    average_episode_size(DIRECTORY, MonitorAppName[index], MonitorDatabaseName[index], [options], False)
                 
             average_episode_size(DIRECTORY, MonitorAppName[index], MonitorDatabaseName[index], TRAKDOCS, True)
             average_episode_size(DIRECTORY, MonitorAppName[index], MonitorDatabaseName[index], TRAKDOCS, False)
@@ -471,7 +522,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
                 os.mkdir(DIRECTORY+"/all_globals") 
                 
             outputName = os.path.splitext(os.path.basename(filename))[0]
-            outputFile_png = DIRECTORY+"/all_out_png/"+outputName+"_Summary"  
+            outputFile_pdf = DIRECTORY+"/all_out_pdf/"+outputName+"_Summary"  
             outputFile_csv = DIRECTORY+"/all_out_csv/"+outputName+"_Summary"                                  
             
             print("Globals: %s" % outputName)
@@ -535,14 +586,14 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
             index = np.arange(len(df_out['Full_Global'].head(20)))
             plt.barh(df_out['Full_Global'].head(20), df_out['Growth Size'].head(20))
 
-            plt.title('Top 20 - Globals by Growth', fontsize=14)
+            plt.title('Top 20 - Globals by Growth  '+TITLEDATES, fontsize=14)
             plt.xlabel('Growth over period (MB)', fontsize=10)
             plt.tick_params(labelsize=10)  
             plt.yticks(index, df_out['Full_Global'].head(20), fontsize=10)
             ax = plt.gca()
             ax.xaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
             plt.tight_layout()
-            plt.savefig(outputFile_png+"_Top_20.png")
+            plt.savefig(outputFile_pdf+"_Top_20.pdf", format='pdf')
             plt.close()     
             
             
@@ -563,7 +614,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
                     plt.plot(data.Date.values, data.SizeAllocated.values, '-', label = name)
             plt.legend(loc='best')
     
-            plt.title('Top Growth Globals Over Period', fontsize=14)
+            plt.title('Top Growth Globals Over Period  '+TITLEDATES, fontsize=14)
             plt.ylabel('MB', fontsize=10)
             plt.tick_params(labelsize=10)       
             ax = plt.gca()
@@ -572,7 +623,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
             ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
             plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
             plt.tight_layout()
-            plt.savefig(outputFile_png+"_Top_"+str(TopNDatabaseByGrowthPie)+"_Growth.png")
+            plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowthPie)+"_Growth.pdf", format='pdf')
             plt.close()        
 
 
