@@ -673,7 +673,10 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals, Do_Pages):
             df_master_ps = df_master_ps.dropna(axis=1, how='all')
             df_master_ps = df_master_ps.rename(columns = {'RunDate':'Date'})
             
-            #Group by name Hits
+            # Time does not seem to be exported properly
+            #mask = df_master_ps.SumPTime >0
+            #df_master_ps.loc[mask, "AvgPTime"] = df_master_ps["SumPTime"] / df_master_ps["TotalHits"]
+            df_master_ps["AvgPTime"] = df_master_ps["SumPTime"] / df_master_ps["TotalHits"]
             df_master_ps.to_csv(outputFile_csv+"_df_master_ps.csv", sep=',') 
             
             #Group by name Hits
@@ -691,13 +694,16 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals, Do_Pages):
             df_ps_by_AvgPGlobals = df_ps_by_AvgPGlobals.sort_values(by = ['AvgPGlobals'], ascending=[False])
             df_ps_by_AvgPGlobals.to_csv(outputFile_csv+"_Name_AvgPGlobals.csv", sep=',') 
             
+            #Group by name MaxPGlobals
+            df_ps_by_MaxPGlobals = df_master_ps.groupby(['pName'], sort=True).sum().reset_index()
+            df_ps_by_MaxPGlobals = df_ps_by_MaxPGlobals.sort_values(by = ['MaxPGlobals'], ascending=[False])
+            df_ps_by_MaxPGlobals.to_csv(outputFile_csv+"_Name_MaxPGlobals.csv", sep=',') 
+            
             #Group by name SumPTime
             df_ps_by_SumPTime = df_master_ps.groupby(['pName'], sort=True).sum().reset_index()
             df_ps_by_SumPTime = df_ps_by_SumPTime.sort_values(by = ['SumPTime'], ascending=[False])
             df_ps_by_SumPTime.to_csv(outputFile_csv+"_Name_SumPTime.csv", sep=',')
             
-            #new_df = df.groupby(['user_ID','product_id'], sort=True).sum().reset_index()
-            #new_df = new_df.sort_values(by = ['user_ID', 'amount'], ascending=[True,False])
 
             # Plot the top N by ....
             df_master_ps['Date'] = pd.to_datetime(df_master_ps['Date'])  
@@ -806,15 +812,36 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals, Do_Pages):
             plt.tight_layout()
             plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowth)+"_TotalHits_SumGlobals.pdf", format='pdf')
             plt.close()               
- 
- 
-            top_List = df_ps_by_TotalHits['pName'].head(TopNDatabaseByGrowth).tolist()
-            grpd = df_master_ps.groupby('pName') 
 
+            top_List = df_ps_by_MaxPGlobals['pName'].head(TopNDatabaseByGrowth).tolist()
+            grpd = df_master_ps.groupby('pName') 
             plt.style.use('seaborn')
             current_palette_10 = sns.color_palette("Paired", TopNDatabaseByGrowth)
             sns.set_palette(current_palette_10)
-            
+
+            plt.figure(num=None, figsize=(10, 6), dpi=80)         
+            for name, data in grpd:        
+                if name in top_List:        
+                    plt.plot(data.Date.values, data.AvgPGlobals.values, '-', label = name)
+            plt.title('High Maximum Average Globals (Not Stacked)  '+TITLEDATES, fontsize=14)
+            plt.ylabel('Average Globals', fontsize=10)
+            plt.tick_params(labelsize=10) 
+            plt.legend(loc='upper left')      
+            ax = plt.gca()
+            ax.set_ylim(ymin=0)  # Always zero start
+            ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
+            ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
+            plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
+            plt.tight_layout()
+            plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowth)+"_MaxPGlobals.pdf", format='pdf')
+            plt.close()               
+
+ 
+            top_List = df_ps_by_TotalHits['pName'].head(TopNDatabaseByGrowth).tolist()
+            grpd = df_master_ps.groupby('pName') 
+            plt.style.use('seaborn')
+            current_palette_10 = sns.color_palette("Paired", TopNDatabaseByGrowth)
+            sns.set_palette(current_palette_10)
             plt.figure(num=None, figsize=(10, 6), dpi=80)         
             for name, data in grpd:        
                 if name in top_List:        
@@ -853,16 +880,45 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals, Do_Pages):
             plt.tight_layout()
             plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowth)+"_TotalHits_SumPTime.pdf", format='pdf')
             plt.close()               
+ 
+            top_List = df_ps_by_SumPGlobals['pName'].head(TopNDatabaseByGrowth).tolist()
+            grpd = df_master_ps.groupby('pName') 
+            plt.style.use('seaborn')
+            current_palette_10 = sns.color_palette("Paired", TopNDatabaseByGrowth)
+            sns.set_palette(current_palette_10)
+            plt.figure(num=None, figsize=(10, 6), dpi=80)         
+            for name, data in grpd:        
+                if name in top_List:        
+                    plt.plot(data.Date.values, data.AvgPGlobals.values, '-', label = name)
+            plt.title('Average Globals for High Sum Globals (Not Stacked)  '+TITLEDATES, fontsize=14)
+            plt.ylabel('Average Globals', fontsize=10)
+            plt.tick_params(labelsize=10) 
+            plt.legend(loc='upper left')  
+            ax = plt.gca()
+            ax.set_ylim(ymin=0)  # Always zero start
+            ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
+            ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
+            plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
+            plt.tight_layout()
+            plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowth)+"_SumPGlobals_AvgPGlobals.pdf", format='pdf')
+            plt.close()               
 
-  
+   
             # Set date index for individual plots
-            #df_master_ps.set_index('Date',inplace=True)
+            df_master_ps.set_index('Date',inplace=True)
 
-            # Create a view of the master  by SumPGlobals  
-            #TopHit = df_ps_by_SumPGlobals['pName'].iloc[0]    
-            #df_ps_top_SumPGlobals = df_master_ps[df_master_ps.pName == TopHit ]            
-            #generic_plot(df_ps_top_SumPGlobals, 'AvgPGlobals', 'Average Globals by day'+TopHit+' '+TITLEDATES, 'Average Globals', outputFile_pdf+"_Top_SumPGlobals.pdf", False, True )
-        
+            # get top by sum globals and display charts
+            top_List = df_ps_by_SumPGlobals['pName'].head(TopNDatabaseByGrowth).tolist()
+            
+            x=0
+            for name in top_List :
+                
+                df_ps_top_ind = df_master_ps[df_master_ps.pName == name ]            
+                generic_plot(df_ps_top_ind, 'AvgPGlobals', 'Average Globals by day '+name+' '+TITLEDATES, 'Average Globals', outputFile_pdf+"_"+str(x)+"_"+name+"_Globals.pdf", False, True )
+                generic_plot(df_ps_top_ind, 'AvgPTime', 'Average component time by day '+name+' '+TITLEDATES, 'Average Time', outputFile_pdf+"_"+str(x)+"_"+name+"_Time.pdf", True, True )
+                
+                df_ps_top_ind.to_csv(outputFile_csv+"_"+str(x)+"_"+name+".csv", sep=',')
+                x = x+1
 
     print("Finished\n") 
         
