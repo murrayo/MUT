@@ -195,11 +195,12 @@ def average_episode_size(DIRECTORY, MonitorAppFile, MonitorDatabaseFile, TRAKDOC
             TextString = 'Average database growth/day : '+'{v:,.3f}'.format(v=DatabaseGrowthTotal/1000/df_result['DatabaseGrowthMB'].count())+' GB'              
             generic_plot(df_result, 'DatabaseGrowthMB', ChartTitle, "MB", outputFile_pdf_y, False, True, TextString  )
         
-def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
+def mainline(DIRECTORY, TRAKDOCS, Do_Globals, Do_Pages):
 
     # Top N values. To do; make parameters
     TopNDatabaseByGrowth    = 10
     TopNDatabaseByGrowthPie = 5
+    TopNDatabaseByGrowthStack = 6
     
     # Get list of files in directory, can have multiples of same type if follow regex
     MonitorAppName=glob.glob(DIRECTORY+'/*MonitorApp.txt')
@@ -396,7 +397,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         # Growth of top n databases over time (not stacked)
         df_master_db['Date'] = pd.to_datetime(df_master_db['Date']) # Convert text field to date time
         
-        top_List = df_out['Database'].head(TopNDatabaseByGrowthPie).tolist()
+        top_List = df_out['Database'].head(TopNDatabaseByGrowthStack).tolist()
         grpd = df_master_db.groupby('Name') 
 
         plt.style.use('seaborn')
@@ -416,11 +417,38 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
         plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
         plt.tight_layout()
-        plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowthPie)+"_Growth_Time.pdf", format='pdf')
+        plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowthStack)+"_Growth_Time.pdf", format='pdf')
         plt.close()               
 
         
-        # Pie chart like Dave's to show relative sizes, Last day of sample period
+        # Pie chart like Dave's to show relative sizes, First and Last day of sample period
+        FirstDay=df_master_db['Date'].iloc[0]
+        df_temp = df_master_db.loc[df_master_db['Date'] == FirstDay] 
+
+        df_sorted = df_temp.sort_values(by=['DatabaseUsedMB'], ascending=False )
+        df_sorted.to_csv(outputFile_csv+"_pie.csv", sep=',', index=False)
+        
+        # Drop rows with unmounted databases - size shows up as NaN
+        # df_sorted = df_sorted.dropna() <--- cant use this drops too much
+
+        Total_all_db=df_sorted['DatabaseUsedMB'].sum()
+        TOTAL_ALL_DB=Total_all_db/1000
+        
+        df_sorted["Labels"] = np.where(df_sorted['DatabaseUsedMB']*100/Total_all_db > 2, df_sorted['Name'], '')
+        
+        plt.style.use('seaborn')
+        plt.figure(num=None, figsize=(10, 6), dpi=80)
+        pie_exp = tuple(0.1 if i < 2 else 0 for i in range(df_sorted['Name'].count())) # Pie explode 
+        
+        plt.pie(df_sorted['DatabaseUsedMB'], labels = df_sorted["Labels"], autopct=make_autopct(df_sorted['DatabaseUsedMB']), startangle=60, explode=pie_exp, shadow=True)
+        plt.title('Top Database Sizes at '+str(FirstDay)+' - Total '+'{v:,.0f}'.format(v=TOTAL_ALL_DB)+' GB' , fontsize=14)
+        
+        plt.axis('equal')
+        plt.tight_layout()
+        plt.savefig(outputFile_pdf+"_Total_DB_Size_Pie_Start.pdf")
+        plt.close()
+
+        # Last day of sample period
         LastDay=df_master_db['Date'].iloc[-1]
         df_temp = df_master_db.loc[df_master_db['Date'] == LastDay] 
 
@@ -444,13 +472,12 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         
         plt.axis('equal')
         plt.tight_layout()
-        plt.savefig(outputFile_pdf+"_Total_DB_Size_Pie.pdf")
+        plt.savefig(outputFile_pdf+"_Total_DB_Size_Pie_End.pdf")
         plt.close()
-
 
         # Stacked Chart is a good way to look at Top N
         
-        top_List = df_out['Database'].head(TopNDatabaseByGrowthPie).tolist()
+        top_List = df_out['Database'].head(TopNDatabaseByGrowthStack).tolist()
         df_top_List = df_master_db[df_master_db['Name'].isin( top_List )]
         
         dates = pd.DataFrame({'Date':df_master_db.Date.unique()}) # Get unique database names in list
@@ -477,7 +504,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
 
         plt.stackplot(dates, all_items, labels=all_keys, colors=pal, alpha=0.5)
 
-        plt.title('Top '+str(TopNDatabaseByGrowthPie)+' - Database Growth  '+TITLEDATES, fontsize=14)
+        plt.title('Top '+str(TopNDatabaseByGrowthStack)+' - Database Growth  '+TITLEDATES, fontsize=14)
         plt.ylabel('MB', fontsize=10)
         plt.tick_params(labelsize=10)  
         ax = plt.gca()
@@ -488,7 +515,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         plt.tight_layout()
         plt.legend(loc='upper left')    
         
-        plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowthPie)+"_Growth_Time_Stack.pdf", format='pdf')
+        plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowthStack)+"_Growth_Time_Stack.pdf", format='pdf')
         plt.close()
         
         
@@ -576,20 +603,20 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
             df_out = pd.DataFrame(lst, columns=cols).sort_values(by=['Growth Size'], ascending=False)    
             df_out.to_csv(outputFile_csv+".csv", sep=',', index=False)
             
-            df_out.head(20).to_csv(outputFile_csv+"_top_20.csv", sep=',', index=False)
+            df_out.head(TopNDatabaseByGrowth).to_csv(outputFile_csv+"_top_"+str(TopNDatabaseByGrowth)+".csv", sep=',', index=False)
         
         
-            # Lets see the highest growth globals
+            # Lets see the highest growth globals - bar chart
         
             plt.style.use('seaborn')
             plt.figure(num=None, figsize=(10, 6), dpi=80)
-            index = np.arange(len(df_out['Full_Global'].head(20)))
-            plt.barh(df_out['Full_Global'].head(20), df_out['Growth Size'].head(20))
+            index = np.arange(len(df_out['Full_Global'].head(TopNDatabaseByGrowth)))
+            plt.barh(df_out['Full_Global'].head(TopNDatabaseByGrowth), df_out['Growth Size'].head(TopNDatabaseByGrowth))
 
-            plt.title('Top 20 - Globals by Growth  '+TITLEDATES, fontsize=14)
+            plt.title('Top '+str(TopNDatabaseByGrowth)+' - Globals by Growth  '+TITLEDATES, fontsize=14)
             plt.xlabel('Growth over period (MB)', fontsize=10)
             plt.tick_params(labelsize=10)  
-            plt.yticks(index, df_out['Full_Global'].head(20), fontsize=10)
+            plt.yticks(index, df_out['Full_Global'].head(TopNDatabaseByGrowth), fontsize=10)
             ax = plt.gca()
             ax.xaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
             plt.tight_layout()
@@ -597,13 +624,11 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
             plt.close()     
             
             
-            # Growth of top n globals
-            
-            TopNDatabaseByGrowthPie=6
+            # Growth of top n globals - Stack
             
             df_master_gb['Date'] = pd.to_datetime(df_master_gb['Date'])
             
-            top_List = df_out['Full_Global'].head(TopNDatabaseByGrowthPie).tolist()
+            top_List = df_out['Full_Global'].head(TopNDatabaseByGrowthStack).tolist()
             grpd = df_master_gb.groupby('Full_Global') 
 
             plt.style.use('seaborn')
@@ -623,9 +648,221 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
             ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
             plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
             plt.tight_layout()
-            plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowthPie)+"_Growth.pdf", format='pdf')
+            plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowthStack)+"_Growth.pdf", format='pdf')
             plt.close()        
 
+    # Page Summary - takes a while, explicitly run it with -p option -------------------------
+    
+    if Do_Pages :
+    
+        for filename in MonitorPageSummaryName:
+        
+            if not os.path.exists(DIRECTORY+"/all_pages"):
+                os.mkdir(DIRECTORY+"/all_pages") 
+                
+            outputName = os.path.splitext(os.path.basename(filename))[0]
+            outputFile_pdf = DIRECTORY+"/all_out_pdf/"+outputName+"_Summary"  
+            outputFile_csv = DIRECTORY+"/all_out_csv/"+outputName+"_Summary"                                  
+            
+            print("Page Summary: %s" % outputName)
+            
+            # What are the high growth pages in this period? 
+            # Get glorefs, dont key by date as we will use this field
+
+            df_master_ps = pd.read_csv(filename, sep='\t', encoding = "ISO-8859-1")
+            df_master_ps = df_master_ps.dropna(axis=1, how='all')
+            df_master_ps = df_master_ps.rename(columns = {'RunDate':'Date'})
+            
+            #Group by name Hits
+            df_master_ps.to_csv(outputFile_csv+"_df_master_ps.csv", sep=',') 
+            
+            #Group by name Hits
+            df_ps_by_TotalHits = df_master_ps.groupby(['pName'], sort=True).sum().reset_index()
+            df_ps_by_TotalHits = df_ps_by_TotalHits.sort_values(by = ['TotalHits'], ascending=[False])
+            df_ps_by_TotalHits.to_csv(outputFile_csv+"_Name_TotalHits.csv", sep=',') 
+
+            #Group by name SumPGlobals
+            df_ps_by_SumPGlobals = df_master_ps.groupby(['pName'], sort=True).sum().reset_index()
+            df_ps_by_SumPGlobals = df_ps_by_SumPGlobals.sort_values(by = ['SumPGlobals'], ascending=[False])
+            df_ps_by_SumPGlobals.to_csv(outputFile_csv+"_Name_SumPGlobals.csv", sep=',') 
+            
+            #Group by name AvgPGlobals
+            df_ps_by_AvgPGlobals = df_master_ps.groupby(['pName'], sort=True).sum().reset_index()
+            df_ps_by_AvgPGlobals = df_ps_by_AvgPGlobals.sort_values(by = ['AvgPGlobals'], ascending=[False])
+            df_ps_by_AvgPGlobals.to_csv(outputFile_csv+"_Name_AvgPGlobals.csv", sep=',') 
+            
+            #Group by name SumPTime
+            df_ps_by_SumPTime = df_master_ps.groupby(['pName'], sort=True).sum().reset_index()
+            df_ps_by_SumPTime = df_ps_by_SumPTime.sort_values(by = ['SumPTime'], ascending=[False])
+            df_ps_by_SumPTime.to_csv(outputFile_csv+"_Name_SumPTime.csv", sep=',')
+            
+            #new_df = df.groupby(['user_ID','product_id'], sort=True).sum().reset_index()
+            #new_df = new_df.sort_values(by = ['user_ID', 'amount'], ascending=[True,False])
+
+            # Plot the top N by ....
+            df_master_ps['Date'] = pd.to_datetime(df_master_ps['Date'])  
+
+            top_List = df_ps_by_SumPGlobals['pName'].head(TopNDatabaseByGrowthStack).tolist()
+            grpd = df_master_ps.groupby('pName') 
+            plt.style.use('seaborn')
+            plt.figure(num=None, figsize=(10, 6), dpi=80)         
+            for name, data in grpd:        
+                if name in top_List:        
+                    plt.plot(data.Date.values, data.SumPGlobals.values, '-', label = name)
+            plt.title('High Sum Globals (Not Stacked)  '+TITLEDATES, fontsize=14)
+            plt.ylabel('Sum Globals', fontsize=10)
+            plt.tick_params(labelsize=10) 
+            plt.legend(loc='upper left')      
+            ax = plt.gca()
+            ax.set_ylim(ymin=0)  # Always zero start
+            ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
+            ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
+            plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
+            plt.tight_layout()
+            plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowthStack)+"_Sum_Globals.pdf", format='pdf')
+            plt.close()               
+
+            top_List = df_ps_by_AvgPGlobals['pName'].head(TopNDatabaseByGrowthStack).tolist()
+            grpd = df_master_ps.groupby('pName') 
+            plt.style.use('seaborn')
+            plt.figure(num=None, figsize=(10, 6), dpi=80)         
+            for name, data in grpd:        
+                if name in top_List:        
+                    plt.plot(data.Date.values, data.AvgPGlobals.values, '-', label = name)
+            plt.title('High Average Globals (Not Stacked)  '+TITLEDATES, fontsize=14)
+            plt.ylabel('Average Globals', fontsize=10)
+            plt.tick_params(labelsize=10) 
+            plt.legend(loc='upper left')      
+            ax = plt.gca()
+            ax.set_ylim(ymin=0)  # Always zero start
+            ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
+            ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
+            plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
+            plt.tight_layout()
+            plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowthStack)+"_Average_Globals.pdf", format='pdf')
+            plt.close()               
+
+            top_List = df_ps_by_SumPTime['pName'].head(TopNDatabaseByGrowthStack).tolist()
+            grpd = df_master_ps.groupby('pName') 
+            plt.style.use('seaborn')
+            plt.figure(num=None, figsize=(10, 6), dpi=80)         
+            for name, data in grpd:        
+                if name in top_List:        
+                    plt.plot(data.Date.values, data.SumPTime.values, '-', label = name)
+            plt.title('High Sum Time (Not Stacked)  '+TITLEDATES, fontsize=14)
+            plt.ylabel('Sum Time', fontsize=10)
+            plt.tick_params(labelsize=10) 
+            plt.legend(loc='upper left')      
+            ax = plt.gca()
+            ax.set_ylim(ymin=0)  # Always zero start
+            ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
+            ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
+            plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
+            plt.tight_layout()
+            plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowthStack)+"_SumPTime.pdf", format='pdf')
+            plt.close()               
+
+            top_List = df_ps_by_TotalHits['pName'].head(TopNDatabaseByGrowthStack).tolist()
+            grpd = df_master_ps.groupby('pName') 
+            plt.style.use('seaborn')
+            plt.figure(num=None, figsize=(10, 6), dpi=80)         
+            for name, data in grpd:        
+                if name in top_List:        
+                    plt.plot(data.Date.values, data.TotalHits.values, '-', label = name)
+            plt.title('High Hits (Not Stacked)  '+TITLEDATES, fontsize=14)
+            plt.ylabel('Number of Hits', fontsize=10)
+            plt.tick_params(labelsize=10) 
+            plt.legend(loc='upper left')      
+            ax = plt.gca()
+            ax.set_ylim(ymin=0)  # Always zero start
+            ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
+            ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
+            plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
+            plt.tight_layout()
+            plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowthStack)+"_TotalHits.pdf", format='pdf')
+            plt.close()               
+
+            # Note top 10
+            top_List = df_ps_by_TotalHits['pName'].head(TopNDatabaseByGrowth).tolist()
+            grpd = df_master_ps.groupby('pName') 
+
+            plt.style.use('seaborn')
+            current_palette_10 = sns.color_palette("Paired", TopNDatabaseByGrowth)
+            sns.set_palette(current_palette_10)
+            
+            plt.figure(num=None, figsize=(10, 6), dpi=80)         
+            for name, data in grpd:        
+                if name in top_List:        
+                    plt.plot(data.Date.values, data.SumPGlobals.values, '-', label = name)
+            plt.title('Sum Globals for High Hits (Not Stacked)  '+TITLEDATES, fontsize=14)
+            plt.ylabel('Sum Globals', fontsize=10)
+            plt.tick_params(labelsize=10) 
+            plt.legend(loc='upper left')  
+            ax = plt.gca()
+            ax.set_ylim(ymin=0)  # Always zero start
+            ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
+            ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
+            plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
+            plt.tight_layout()
+            plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowth)+"_TotalHits_SumGlobals.pdf", format='pdf')
+            plt.close()               
+ 
+ 
+            top_List = df_ps_by_TotalHits['pName'].head(TopNDatabaseByGrowth).tolist()
+            grpd = df_master_ps.groupby('pName') 
+
+            plt.style.use('seaborn')
+            current_palette_10 = sns.color_palette("Paired", TopNDatabaseByGrowth)
+            sns.set_palette(current_palette_10)
+            
+            plt.figure(num=None, figsize=(10, 6), dpi=80)         
+            for name, data in grpd:        
+                if name in top_List:        
+                    plt.plot(data.Date.values, data.AvgPGlobals.values, '-', label = name)
+            plt.title('Average Globals for High Hits (Not Stacked)  '+TITLEDATES, fontsize=14)
+            plt.ylabel('Average Globals', fontsize=10)
+            plt.tick_params(labelsize=10) 
+            plt.legend(loc='upper left')  
+            ax = plt.gca()
+            ax.set_ylim(ymin=0)  # Always zero start
+            ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
+            ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
+            plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
+            plt.tight_layout()
+            plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowth)+"_TotalHits_AvgPGlobals.pdf", format='pdf')
+            plt.close()               
+
+            top_List = df_ps_by_TotalHits['pName'].head(TopNDatabaseByGrowth).tolist()
+            grpd = df_master_ps.groupby('pName') 
+            plt.style.use('seaborn')
+            current_palette_10 = sns.color_palette("Paired", TopNDatabaseByGrowth)
+            sns.set_palette(current_palette_10)
+            plt.figure(num=None, figsize=(10, 6), dpi=80)         
+            for name, data in grpd:        
+                if name in top_List:        
+                    plt.plot(data.Date.values, data.SumPTime.values, '-', label = name)
+            plt.title('Sum Time for High Hits (Not Stacked)  '+TITLEDATES, fontsize=14)
+            plt.ylabel('Sum Time', fontsize=10)
+            plt.tick_params(labelsize=10) 
+            plt.legend(loc='upper left')  
+            ax = plt.gca()
+            ax.set_ylim(ymin=0)  # Always zero start
+            ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
+            ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
+            plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
+            plt.tight_layout()
+            plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowth)+"_TotalHits_SumPTime.pdf", format='pdf')
+            plt.close()               
+
+  
+            # Set date index for individual plots
+            #df_master_ps.set_index('Date',inplace=True)
+
+            # Create a view of the master  by SumPGlobals  
+            #TopHit = df_ps_by_SumPGlobals['pName'].iloc[0]    
+            #df_ps_top_SumPGlobals = df_master_ps[df_master_ps.pName == TopHit ]            
+            #generic_plot(df_ps_top_SumPGlobals, 'AvgPGlobals', 'Average Globals by day'+TopHit+' '+TITLEDATES, 'Average Globals', outputFile_pdf+"_Top_SumPGlobals.pdf", False, True )
+        
 
     print("Finished\n") 
         
@@ -634,7 +871,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="TrakCare Monitor Process")
     parser.add_argument("-d", "--directory", help="Directory with Monitor files", required=True)  
     parser.add_argument("-l", "--listofDBs", nargs='+', help="TrakCare databases names to exclude from episode size") 
-    parser.add_argument("-g", "--globals", help="Globals take a long time", action="store_true")    
+    parser.add_argument("-g", "--globals", help="Globals take a long time", action="store_true")  
+    parser.add_argument("-p", "--page", help="Page Summary take a long time", action="store_true")   
 
     args = parser.parse_args()
    
@@ -650,7 +888,7 @@ if __name__ == '__main__':
         TRAKDOCS = [""] 
         
     try:
-         mainline(DIRECTORY, TRAKDOCS, args.globals)       
+         mainline(DIRECTORY, TRAKDOCS, args.globals, args.page)       
     except OSError as e:
         print('Could not process files because: {}'.format(str(e)))
         
