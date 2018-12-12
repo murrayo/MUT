@@ -47,6 +47,36 @@ def generic_plot(df, column, Title, yLabel, saveAs, pres=False, yzero=True, Text
         plt.savefig(saveAs, format='pdf')
         plt.close()
 
+def generic_top_n(df_sort, TopN, df_master_ps, plot_what, Title, yLabel, saveAs, pres=False):
+
+        top_List = df_sort['pName'].head(TopN).tolist()
+        grpd = df_master_ps.groupby('pName') 
+
+        plt.style.use('seaborn')
+        current_palette_10 = sns.color_palette("Paired", TopN)
+        sns.set_palette(current_palette_10)
+      
+        plt.figure(num=None, figsize=(10, 6), dpi=300)         
+        for name, data in grpd:        
+            if name in top_List:        
+                plt.plot(data.Date.values, data.eval(plot_what).values, '-', label = name)
+        plt.title(Title, fontsize=14)
+        plt.ylabel(yLabel, fontsize=10)
+        plt.tick_params(labelsize=10) 
+        plt.legend(loc='upper left')      
+        ax = plt.gca()
+        ax.set_ylim(ymin=0)  # Always zero start
+        if pres :
+            ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.2f}'))
+        else :
+            ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))    
+
+        ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
+        plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
+        plt.tight_layout()
+        plt.savefig(saveAs, format='pdf')
+        plt.close()               
+
 # Dont crowd the pie chart. To do; bucket 'Other' after 2pct
     
 def make_autopct(values):
@@ -572,8 +602,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals, Do_Pages):
             df_master_gb['DataBasePath'].replace("__", "",inplace=True, regex=True)
             
             df_master_gb['Full_Global'] = df_master_gb['DataBasePath'].str[1:]+df_master_gb['GlobalName']
-
-            
+     
             # Get unique names and use that as a key to create a new dataframe per global
         
             df_globals = pd.DataFrame({'Full_Global':df_master_gb.Full_Global.unique()}) # Get unique names
@@ -707,218 +736,79 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals, Do_Pages):
 
             # Plot the top N by ....
             df_master_ps['Date'] = pd.to_datetime(df_master_ps['Date'])  
+            
+            generic_top_n(df_ps_by_SumPGlobals, TopNDatabaseByGrowthStack, df_master_ps, "SumPGlobals", 'High Sum Globals (Not Stacked)  '+TITLEDATES, \
+                                                                        'Sum Globals', outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowthStack)+"_Sum_Globals.pdf", pres=False)
 
-            top_List = df_ps_by_SumPGlobals['pName'].head(TopNDatabaseByGrowthStack).tolist()
-            grpd = df_master_ps.groupby('pName') 
-            plt.style.use('seaborn')
-            plt.figure(num=None, figsize=(10, 6), dpi=80)         
-            for name, data in grpd:        
-                if name in top_List:        
-                    plt.plot(data.Date.values, data.SumPGlobals.values, '-', label = name)
-            plt.title('High Sum Globals (Not Stacked)  '+TITLEDATES, fontsize=14)
-            plt.ylabel('Sum Globals', fontsize=10)
-            plt.tick_params(labelsize=10) 
-            plt.legend(loc='upper left')      
-            ax = plt.gca()
-            ax.set_ylim(ymin=0)  # Always zero start
-            ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
-            ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
-            plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
-            plt.tight_layout()
-            plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowthStack)+"_Sum_Globals.pdf", format='pdf')
-            plt.close()               
+            generic_top_n(df_ps_by_AvgPGlobals, TopNDatabaseByGrowthStack, df_master_ps, "AvgPGlobals", 'High Average Globals (Not Stacked)  '+TITLEDATES, \
+                                                                        'Average Globals', outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowthStack)+"_Average_Globals.pdf", pres=False)
 
-            top_List = df_ps_by_AvgPGlobals['pName'].head(TopNDatabaseByGrowthStack).tolist()
-            grpd = df_master_ps.groupby('pName') 
-            plt.style.use('seaborn')
-            plt.figure(num=None, figsize=(10, 6), dpi=80)         
-            for name, data in grpd:        
-                if name in top_List:        
-                    plt.plot(data.Date.values, data.AvgPGlobals.values, '-', label = name)
-            plt.title('High Average Globals (Not Stacked)  '+TITLEDATES, fontsize=14)
-            plt.ylabel('Average Globals', fontsize=10)
-            plt.tick_params(labelsize=10) 
-            plt.legend(loc='upper left')      
-            ax = plt.gca()
-            ax.set_ylim(ymin=0)  # Always zero start
-            ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
-            ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
-            plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
-            plt.tight_layout()
-            plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowthStack)+"_Average_Globals.pdf", format='pdf')
-            plt.close()               
+            generic_top_n(df_ps_by_SumPTime, TopNDatabaseByGrowthStack, df_master_ps, "SumPTime", 'High Sum Time (Not Stacked)  '+TITLEDATES, \
+                                                                        'Sum Time', outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowthStack)+"_SumPTime.pdf", pres=False)
 
-            top_List = df_ps_by_SumPTime['pName'].head(TopNDatabaseByGrowthStack).tolist()
-            grpd = df_master_ps.groupby('pName') 
-            plt.style.use('seaborn')
-            plt.figure(num=None, figsize=(10, 6), dpi=80)         
-            for name, data in grpd:        
-                if name in top_List:        
-                    plt.plot(data.Date.values, data.SumPTime.values, '-', label = name)
-            plt.title('High Sum Time (Not Stacked)  '+TITLEDATES, fontsize=14)
-            plt.ylabel('Sum Time', fontsize=10)
-            plt.tick_params(labelsize=10) 
-            plt.legend(loc='upper left')      
-            ax = plt.gca()
-            ax.set_ylim(ymin=0)  # Always zero start
-            ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
-            ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
-            plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
-            plt.tight_layout()
-            plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowthStack)+"_SumPTime.pdf", format='pdf')
-            plt.close()               
-
-            top_List = df_ps_by_TotalHits['pName'].head(TopNDatabaseByGrowthStack).tolist()
-            grpd = df_master_ps.groupby('pName') 
-            plt.style.use('seaborn')
-            plt.figure(num=None, figsize=(10, 6), dpi=80)         
-            for name, data in grpd:        
-                if name in top_List:        
-                    plt.plot(data.Date.values, data.TotalHits.values, '-', label = name)
-            plt.title('High Hits (Not Stacked)  '+TITLEDATES, fontsize=14)
-            plt.ylabel('Number of Hits', fontsize=10)
-            plt.tick_params(labelsize=10) 
-            plt.legend(loc='upper left')      
-            ax = plt.gca()
-            ax.set_ylim(ymin=0)  # Always zero start
-            ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
-            ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
-            plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
-            plt.tight_layout()
-            plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowthStack)+"_TotalHits.pdf", format='pdf')
-            plt.close()               
+            generic_top_n(df_ps_by_TotalHits, TopNDatabaseByGrowthStack, df_master_ps, "TotalHits", 'High Hits (Not Stacked)  '+TITLEDATES, \
+                                                                        'Number of Hits', outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowthStack)+"_TotalHits.pdf", pres=False)
 
             # Note top 10
-            top_List = df_ps_by_TotalHits['pName'].head(TopNDatabaseByGrowth).tolist()
-            grpd = df_master_ps.groupby('pName') 
+            generic_top_n(df_ps_by_TotalHits, TopNDatabaseByGrowth, df_master_ps, "SumPGlobals", 'Sum Globals for High Hits (Not Stacked)  '+TITLEDATES, \
+                                                                        'Sum Globals', outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowth)+"_TotalHits_SumGlobals.pdf", pres=False)
 
-            plt.style.use('seaborn')
-            current_palette_10 = sns.color_palette("Paired", TopNDatabaseByGrowth)
-            sns.set_palette(current_palette_10)
-            
-            plt.figure(num=None, figsize=(10, 6), dpi=80)         
-            for name, data in grpd:        
-                if name in top_List:        
-                    plt.plot(data.Date.values, data.SumPGlobals.values, '-', label = name)
-            plt.title('Sum Globals for High Hits (Not Stacked)  '+TITLEDATES, fontsize=14)
-            plt.ylabel('Sum Globals', fontsize=10)
-            plt.tick_params(labelsize=10) 
-            plt.legend(loc='upper left')  
-            ax = plt.gca()
-            ax.set_ylim(ymin=0)  # Always zero start
-            ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
-            ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
-            plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
-            plt.tight_layout()
-            plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowth)+"_TotalHits_SumGlobals.pdf", format='pdf')
-            plt.close()               
+            generic_top_n(df_ps_by_MaxPGlobals, TopNDatabaseByGrowth, df_master_ps, "AvgPGlobals", 'High Maximum Average Globals (Not Stacked)  '+TITLEDATES, \
+                                                                        'Average Globals', outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowth)+"_MaxPGlobals.pdf", pres=False)
 
-            top_List = df_ps_by_MaxPGlobals['pName'].head(TopNDatabaseByGrowth).tolist()
-            grpd = df_master_ps.groupby('pName') 
-            plt.style.use('seaborn')
-            current_palette_10 = sns.color_palette("Paired", TopNDatabaseByGrowth)
-            sns.set_palette(current_palette_10)
+            generic_top_n(df_ps_by_TotalHits, TopNDatabaseByGrowth, df_master_ps, "AvgPGlobals", 'Average Globals for High Hits (Not Stacked)  '+TITLEDATES, \
+                                                                        'Average Globals', outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowth)+"_TotalHits_AvgPGlobals.pdf", pres=False)
 
-            plt.figure(num=None, figsize=(10, 6), dpi=80)         
-            for name, data in grpd:        
-                if name in top_List:        
-                    plt.plot(data.Date.values, data.AvgPGlobals.values, '-', label = name)
-            plt.title('High Maximum Average Globals (Not Stacked)  '+TITLEDATES, fontsize=14)
-            plt.ylabel('Average Globals', fontsize=10)
-            plt.tick_params(labelsize=10) 
-            plt.legend(loc='upper left')      
-            ax = plt.gca()
-            ax.set_ylim(ymin=0)  # Always zero start
-            ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
-            ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
-            plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
-            plt.tight_layout()
-            plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowth)+"_MaxPGlobals.pdf", format='pdf')
-            plt.close()               
+            generic_top_n(df_ps_by_TotalHits, TopNDatabaseByGrowth, df_master_ps, "SumPTime", 'Sum Time for High Hits (Not Stacked)  '+TITLEDATES, \
+                                                                        'Sum Time', outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowth)+"_TotalHits_SumPTime.pdf", pres=False)
 
- 
-            top_List = df_ps_by_TotalHits['pName'].head(TopNDatabaseByGrowth).tolist()
-            grpd = df_master_ps.groupby('pName') 
-            plt.style.use('seaborn')
-            current_palette_10 = sns.color_palette("Paired", TopNDatabaseByGrowth)
-            sns.set_palette(current_palette_10)
-            plt.figure(num=None, figsize=(10, 6), dpi=80)         
-            for name, data in grpd:        
-                if name in top_List:        
-                    plt.plot(data.Date.values, data.AvgPGlobals.values, '-', label = name)
-            plt.title('Average Globals for High Hits (Not Stacked)  '+TITLEDATES, fontsize=14)
-            plt.ylabel('Average Globals', fontsize=10)
-            plt.tick_params(labelsize=10) 
-            plt.legend(loc='upper left')  
-            ax = plt.gca()
-            ax.set_ylim(ymin=0)  # Always zero start
-            ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
-            ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
-            plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
-            plt.tight_layout()
-            plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowth)+"_TotalHits_AvgPGlobals.pdf", format='pdf')
-            plt.close()               
+            generic_top_n(df_ps_by_SumPGlobals, TopNDatabaseByGrowth, df_master_ps, "AvgPGlobals", 'Average Globals for High Sum Globals (Not Stacked)  '+TITLEDATES, \
+                                                                        'Average Globals', outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowth)+"_SumPGlobals_AvgPGlobals.pdf", pres=False)
 
-            top_List = df_ps_by_TotalHits['pName'].head(TopNDatabaseByGrowth).tolist()
-            grpd = df_master_ps.groupby('pName') 
-            plt.style.use('seaborn')
-            current_palette_10 = sns.color_palette("Paired", TopNDatabaseByGrowth)
-            sns.set_palette(current_palette_10)
-            plt.figure(num=None, figsize=(10, 6), dpi=80)         
-            for name, data in grpd:        
-                if name in top_List:        
-                    plt.plot(data.Date.values, data.SumPTime.values, '-', label = name)
-            plt.title('Sum Time for High Hits (Not Stacked)  '+TITLEDATES, fontsize=14)
-            plt.ylabel('Sum Time', fontsize=10)
-            plt.tick_params(labelsize=10) 
-            plt.legend(loc='upper left')  
-            ax = plt.gca()
-            ax.set_ylim(ymin=0)  # Always zero start
-            ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
-            ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
-            plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
-            plt.tight_layout()
-            plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowth)+"_TotalHits_SumPTime.pdf", format='pdf')
-            plt.close()               
- 
-            top_List = df_ps_by_SumPGlobals['pName'].head(TopNDatabaseByGrowth).tolist()
-            grpd = df_master_ps.groupby('pName') 
-            plt.style.use('seaborn')
-            current_palette_10 = sns.color_palette("Paired", TopNDatabaseByGrowth)
-            sns.set_palette(current_palette_10)
-            plt.figure(num=None, figsize=(10, 6), dpi=80)         
-            for name, data in grpd:        
-                if name in top_List:        
-                    plt.plot(data.Date.values, data.AvgPGlobals.values, '-', label = name)
-            plt.title('Average Globals for High Sum Globals (Not Stacked)  '+TITLEDATES, fontsize=14)
-            plt.ylabel('Average Globals', fontsize=10)
-            plt.tick_params(labelsize=10) 
-            plt.legend(loc='upper left')  
-            ax = plt.gca()
-            ax.set_ylim(ymin=0)  # Always zero start
-            ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
-            ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
-            plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
-            plt.tight_layout()
-            plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowth)+"_SumPGlobals_AvgPGlobals.pdf", format='pdf')
-            plt.close()               
-
-   
+    
             # Set date index for individual plots
             df_master_ps.set_index('Date',inplace=True)
 
             # get top by sum globals and display charts
             top_List = df_ps_by_SumPGlobals['pName'].head(TopNDatabaseByGrowth).tolist()
-            
+     
+            plt.style.use('seaborn')
+            plt.figure(figsize=(10, 6), dpi=300)
+                                
             x=0
             for name in top_List :
-                
                 df_ps_top_ind = df_master_ps[df_master_ps.pName == name ]            
-                generic_plot(df_ps_top_ind, 'AvgPGlobals', 'Average Globals by day '+name+' '+TITLEDATES, 'Average Globals', outputFile_pdf+"_"+str(x)+"_"+name+"_Globals.pdf", False, True )
-                generic_plot(df_ps_top_ind, 'AvgPTime', 'Average component time by day '+name+' '+TITLEDATES, 'Average Time', outputFile_pdf+"_"+str(x)+"_"+name+"_Time.pdf", True, True )
+                fig, ax1 = plt.subplots()
+                color="g"
+                line1 = ax1.plot(df_ps_top_ind["AvgPGlobals"], color=color)
+                ax1.set_title('Average Globals and Time by day '+TITLEDATES+"\n"+name, fontsize=14)
+                ax1.set_ylabel('Average Globals', fontsize=10, color=color)
+                ax1.tick_params(labelsize=10)  
+                ax1.set_ylim(ymin=0)  # Always zero start                
+                ax1.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))    
+                ax1.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
                 
-                df_ps_top_ind.to_csv(outputFile_csv+"_"+str(x)+"_"+name+".csv", sep=',')
-                x = x+1
+                ax2 = ax1.twinx()
+                color="b"
+                line2 = ax2.plot(df_ps_top_ind["AvgPTime"], color=color)               
+                ax2.set_ylabel('Average Time', fontsize=10, color=color)
+                ax2.tick_params(labelsize=10)  
+                ax2.set_ylim(ymin=0)  # Always zero start                
+                ax2.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.2f}'))
+                ax2.grid(None)    
+                # TextString = ""    
+                #fig.text(0.01,.95,TextString, ha='left', va='center', transform=ax.transAxes, fontsize=12)
+                
+                # added these three lines to get all labels in one legend
+                lines = line1+line2
+                labels = [l.get_label() for l in lines]
+                ax1.legend(lines, labels, loc="best")
+
+                plt.setp(ax1.get_xticklabels(), rotation=45, ha="right")
+                plt.tight_layout()        
+                plt.savefig(outputFile_pdf+"_"+str(x)+"_"+name+"_Globals_Time.pdf", format='pdf')
+                plt.close(fig)
+                x = x+1              
 
     print("Finished\n") 
         
