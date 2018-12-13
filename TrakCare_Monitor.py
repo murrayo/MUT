@@ -276,12 +276,11 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         df_day['Size'] = df_day['Size'].map('{:,.0f}'.format)
         df_day['Journal Size GB'] = df_day['Journal Size GB'].map('{:,.0f}'.format).astype(int)
     
-        TextString = 'Average Journals On Disk : '+'{v:,.0f}'.format(v=df_day['Journal Size GB'].mean())+' GB' 
-        TextString = TextString+', Peak Journals on Disk : '+'{v:,.0f}'.format(v=df_day['Journal Size GB'].max())+' GB'
-        TextString = TextString+'\nNote: Approximate Journals per day = Total Journal Size Per Day / Days Before Purge'
-        generic_plot(df_day, 'Journal Size GB', 'Total Journal File Size on Disk (GB)  '+TITLEDATES, 'GB', outputFile_pdf+".pdf", False, True, TextString )
+        TextString = 'Average Journals/day : '+'{v:,.0f}'.format(v=df_day['Journal Size GB'].mean())+' GB' 
+        TextString = TextString+', Peak Journals/day : '+'{v:,.0f}'.format(v=df_day['Journal Size GB'].max())+' GB'
+        generic_plot(df_day, 'Journal Size GB', 'Journals Per Day (GB)  '+TITLEDATES, 'GB per Day', outputFile_pdf+"_per_day.pdf", False, True, TextString )
         df_day.to_csv(outputFile_csv+"_by_Day.csv", sep=',')
-    
+            
         
     # Episodes  -------------------------------------------------------------------------
     # Output a few useful charts and convert input to csv
