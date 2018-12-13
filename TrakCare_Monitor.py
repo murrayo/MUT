@@ -203,7 +203,7 @@ def average_episode_size(DIRECTORY, MonitorAppFile, MonitorDatabaseFile, TRAKDOC
             TextString = 'Database size at end : '+'{v:,.0f}'.format(v=df_result.iloc[-1]['DatabaseUsedMB']/1000)+" GB\n"
             generic_plot(df_result, 'DatabaseUsedMB', 'Total Database Size (MB)  '+RunDateStart+' to '+RunDateEnd, 'MB', outputFile_pdf+"_All_Total.pdf", False, True, TextString )
             TextString = 'Average database growth/day : '+'{v:,.3f}'.format(v=DatabaseGrowthTotal/1000/df_result['DatabaseGrowthMB'].count())+' GB'
-            generic_plot(df_result, 'DatabaseGrowthMB', 'Database Growth per Day (MB)  '+RunDateStart+' to '+RunDateEnd, 'MB', outputFile_pdf+"_All_Growth.pdf", False, True, TextString  )
+            generic_plot(df_result, 'DatabaseGrowthMB', 'Database Growth per Day (MB)  '+RunDateStart+' to '+RunDateEnd, 'MB', outputFile_pdf+"_All_Growth.pdf", False, False, TextString  )
     else:
         with open( DIRECTORY+"/all_"+outputName+'_Basic_Stats.txt', 'a') as f:
             f.write('\nTotal database growth{0}{1}: {2:,.2f}'.format(includew, ', '.join(TRAKDOCS), DatabaseGrowthTotal/1000)+" GB\n")
@@ -223,7 +223,7 @@ def average_episode_size(DIRECTORY, MonitorAppFile, MonitorDatabaseFile, TRAKDOC
             else:
                 outputFile_pdf_y = outputFile_pdf+'_Not_'+'_'.join(TRAKDOCS)+"_Growth.pdf" 
             TextString = 'Average database growth/day : '+'{v:,.3f}'.format(v=DatabaseGrowthTotal/1000/df_result['DatabaseGrowthMB'].count())+' GB'              
-            generic_plot(df_result, 'DatabaseGrowthMB', ChartTitle, "MB", outputFile_pdf_y, False, True, TextString  )
+            generic_plot(df_result, 'DatabaseGrowthMB', ChartTitle, "MB", outputFile_pdf_y, False, False, TextString  )
         
 def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
 
@@ -276,9 +276,10 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         df_day['Size'] = df_day['Size'].map('{:,.0f}'.format)
         df_day['Journal Size GB'] = df_day['Journal Size GB'].map('{:,.0f}'.format).astype(int)
     
-        TextString = 'Average Journals/day : '+'{v:,.0f}'.format(v=df_day['Journal Size GB'].mean())+' GB' 
-        TextString = TextString+', Peak Journals/day : '+'{v:,.0f}'.format(v=df_day['Journal Size GB'].max())+' GB'
-        generic_plot(df_day, 'Journal Size GB', 'Total Journal Size Per Day (GB)  '+TITLEDATES, 'GB per Day', outputFile_pdf+".pdf", False, True, TextString )
+        TextString = 'Average Journals On Disk : '+'{v:,.0f}'.format(v=df_day['Journal Size GB'].mean())+' GB' 
+        TextString = TextString+', Peak Journals on Disk : '+'{v:,.0f}'.format(v=df_day['Journal Size GB'].max())+' GB'
+        TextString = TextString+'\nNote: Approximate Journals per day = Total Journal Size Per Day / Days Before Purge'
+        generic_plot(df_day, 'Journal Size GB', 'Total Journal File Size on Disk (GB)  '+TITLEDATES, 'GB', outputFile_pdf+".pdf", False, True, TextString )
         df_day.to_csv(outputFile_csv+"_by_Day.csv", sep=',')
     
         
