@@ -256,34 +256,38 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         outputFile_csv = DIRECTORY+"/all_out_csv/"+outputName     
         print("Journals: %s" % outputName)
     
-        df_master = pd.read_csv(filename, sep='\t', encoding = "ISO-8859-1", parse_dates=[0], index_col=0)
+        # Read in journal details, index on create date (column 3)
+        df_master = pd.read_csv(filename, sep='\t', encoding = "ISO-8859-1", index_col=2, parse_dates=[2])
         df_master = df_master.dropna(axis=1, how='all') 
+          
+        df_master.sort_index(inplace=True)
         
-        df_master.index.names = ['Date']        
-        df_master.to_csv(outputFile_csv+".csv", sep=',')
+        # Remove all but last occurrences of duplicates
+        df_master = df_master[~df_master.index.duplicated(keep='last')]  
+              
+        # Group by creation date     
+        df_master["Create Date"] = df_master.index
+        df_master["Create Date"] = df_master["Create Date"].dt.date           
+        df_day = df_master.groupby("Create Date").sum()
         
-        # Lets get the start and end dates to display 
-        #                                              - use for all titles
+        # Start and end dates to display 
+        RunDateStart = df_master.head(1).index.strftime('%d/%m/%Y')
+        RunDateEnd   = df_master.tail(1).index.strftime('%d/%m/%Y')
+        TITLEDATES = str(RunDateStart[0])+' to '+str(RunDateEnd[0])
         
-        RunDateStart = df_master.head(1).index.tolist()
-        RunDateStart = RunDateStart[0].strftime('%d/%m/%Y')
-        RunDateEnd = df_master.tail(1).index.tolist()
-        RunDateEnd = RunDateEnd[0].strftime('%d/%m/%Y')
-        TITLEDATES = RunDateStart+' to '+RunDateEnd
-        
-        df_day = df_master.groupby('Date').sum()
-        df_day['Journal Size GB'] = df_day['Size']/1000000000
-        df_day['Size'] = df_day['Size'].map('{:,.0f}'.format)
+        df_day['Journal Size GB'] = df_day['Size']/(1024*1024*1024)
         df_day['Journal Size GB'] = df_day['Journal Size GB'].map('{:,.0f}'.format).astype(int)
     
         TextString = 'Average Journals/day : '+'{v:,.0f}'.format(v=df_day['Journal Size GB'].mean())+' GB' 
         TextString = TextString+', Peak Journals/day : '+'{v:,.0f}'.format(v=df_day['Journal Size GB'].max())+' GB'
         generic_plot(df_day, 'Journal Size GB', 'Journals Per Day (GB)  '+TITLEDATES, 'GB per Day', outputFile_pdf+"_per_day.pdf", False, True, TextString )
-        df_day.to_csv(outputFile_csv+"_by_Day.csv", sep=',')
-            
         
+        df_day.to_csv(outputFile_csv+"_by_Day.csv", sep=',')
+
+               
     # Episodes  -------------------------------------------------------------------------
     # Output a few useful charts and convert input to csv
+    
     
     for filename in MonitorAppName :
         outputName = os.path.splitext(os.path.basename(filename))[0]
@@ -295,6 +299,12 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         df_master_ep = df_master_ep.dropna(axis=1, how='all') 
         df_master_ep.index.names = ['Date']
         df_master_ep.to_csv(outputFile_csv+".csv", sep=',')
+        
+        RunDateStart = df_master_ep.head(1).index.tolist()
+        RunDateStart = RunDateStart[0].strftime('%d/%m/%Y')
+        RunDateEnd = df_master_ep.tail(1).index.tolist()
+        RunDateEnd = RunDateEnd[0].strftime('%d/%m/%Y')
+        TITLEDATES = RunDateStart+' to '+RunDateEnd
     
         TextString = 'Average Episodes/day : '+'{v:,.0f}'.format(v=df_master_ep['EpisodeCountTotal'].mean()) 
         TextString = TextString+', Peak Episodes/day : '+'{v:,.0f}'.format(v=df_master_ep['EpisodeCountTotal'].max())  
