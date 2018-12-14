@@ -82,7 +82,7 @@ def generic_top_n(df_sort, TopN, df_master_ps, plot_what, Title, yLabel, saveAs,
 def make_autopct(values):
     def my_autopct(pct):
         total = sum(values)
-        val = int(round(pct*total/100000.0))
+        val = int(round(pct*total/102400.0))
         return '{p:.0f}%  ({v:,d} GB)'.format(p=pct,v=val) if pct > 2 else ''
     return my_autopct    
 
@@ -184,37 +184,37 @@ def average_episode_size(DIRECTORY, MonitorAppFile, MonitorDatabaseFile, TRAKDOC
     if TRAKDOCS == ["all"] :
         with open( DIRECTORY+"/all_"+outputName+'_Basic_Stats.txt', 'w') as f:
             f.write('Number of days data            : '+'{v:,.0f}'.format(v=df_result['DatabaseUsedMB'].count())+"\n")      
-            f.write('Database size at start         : '+'{v:,.0f}'.format(v=df_result.iloc[0]['DatabaseUsedMB']/1000)+" GB\n") 
-            f.write('Database size at end           : '+'{v:,.0f}'.format(v=df_result.iloc[-1]['DatabaseUsedMB']/1000)+" GB\n")  
+            f.write('Database size at start         : '+'{v:,.0f}'.format(v=df_result.iloc[0]['DatabaseUsedMB']/1024)+" GB\n") 
+            f.write('Database size at end           : '+'{v:,.0f}'.format(v=df_result.iloc[-1]['DatabaseUsedMB']/1024)+" GB\n")  
                          
-            f.write('\nTotal database growth          : '+'{v:,.3f}'.format(v=DatabaseGrowthTotal/1000)+' GB\n')
-            f.write('Peak database growth/day       : '+'{v:,.3f}'.format(v=df_result['DatabaseGrowthMB'].max()/1000)+' GB\n')        
-            f.write('Average database growth/day    : '+'{v:,.3f}'.format(v=(DatabaseGrowthTotal/1000)/df_result['DatabaseGrowthMB'].count())+' GB\n')
-            f.write('Estimated database growth/year : '+'{v:,.0f}'.format(v=((DatabaseGrowthTotal/1000)/df_result['DatabaseGrowthMB'].count())*365)+' GB\n\n')
+            f.write('\nTotal database growth          : '+'{v:,.3f}'.format(v=DatabaseGrowthTotal/1024)+' GB\n')
+            f.write('Peak database growth/day       : '+'{v:,.3f}'.format(v=df_result['DatabaseGrowthMB'].max()/1024)+' GB\n')        
+            f.write('Average database growth/day    : '+'{v:,.3f}'.format(v=(DatabaseGrowthTotal/1024)/df_result['DatabaseGrowthMB'].count())+' GB\n')
+            f.write('Estimated database growth/year : '+'{v:,.0f}'.format(v=((DatabaseGrowthTotal/1024)/df_result['DatabaseGrowthMB'].count())*365)+' GB\n\n')
 
             f.write('Sum episodes                   : '+'{v:,.0f}'.format(v=df_result['EpisodeCountTotal'].sum())+"\n")
             f.write('Average episodes/day           : '+'{v:,.0f}'.format(v=df_result['EpisodeCountTotal'].mean())+"\n")  
             f.write('Peak episodes/day              : '+'{v:,.0f}'.format(v=df_result['EpisodeCountTotal'].max())+"\n")        
             f.write('Estimated episodes/year        : '+'{v:,.0f}'.format(v=df_result['EpisodeCountTotal'].mean()*365)+"\n\n")       
 
-            f.write('Total database growth{0}{1} databases: {2:,.3f}'.format(includew, ', '.join(TRAKDOCS), DatabaseGrowthTotal/1000)+" GB\n")
-            f.write('Average growth/episode{0}{1} databases: {2:,.0f} KB (per episode size)'.format(includew, ', '.join(TRAKDOCS), AverageEpisodeSize*1000)+"\n")
+            f.write('Total database growth{0}{1} databases: {2:,.3f}'.format(includew, ', '.join(TRAKDOCS), DatabaseGrowthTotal/1024)+" GB\n")
+            f.write('Average growth/episode{0}{1} databases: {2:,.0f} KB (per episode size)'.format(includew, ', '.join(TRAKDOCS), AverageEpisodeSize*1024)+"\n")
             
-            TextString = 'Database size at end : '+'{v:,.0f}'.format(v=df_result.iloc[-1]['DatabaseUsedMB']/1000)+" GB\n"
+            TextString = 'Database size at end : '+'{v:,.0f}'.format(v=df_result.iloc[-1]['DatabaseUsedMB']/1024)+" GB\n"
             generic_plot(df_result, 'DatabaseUsedMB', 'Total Database Size (MB)  '+RunDateStart+' to '+RunDateEnd, 'MB', outputFile_pdf+"_All_Total.pdf", False, True, TextString )
-            TextString = 'Average database growth/day : '+'{v:,.3f}'.format(v=DatabaseGrowthTotal/1000/df_result['DatabaseGrowthMB'].count())+' GB'
+            TextString = 'Average database growth/day : '+'{v:,.3f}'.format(v=DatabaseGrowthTotal/1024/df_result['DatabaseGrowthMB'].count())+' GB'
             generic_plot(df_result, 'DatabaseGrowthMB', 'Database Growth per Day (MB)  '+RunDateStart+' to '+RunDateEnd, 'MB', outputFile_pdf+"_All_Growth.pdf", False, False, TextString  )
     else:
         with open( DIRECTORY+"/all_"+outputName+'_Basic_Stats.txt', 'a') as f:
-            f.write('\nTotal database growth{0}{1}: {2:,.2f}'.format(includew, ', '.join(TRAKDOCS), DatabaseGrowthTotal/1000)+" GB\n")
-            f.write('Average growth/episode{0}{1}: {2:,.0f} KB (per episode size)'.format(includew, ', '.join(TRAKDOCS), AverageEpisodeSize*1000)+"\n")
+            f.write('\nTotal database growth{0}{1}: {2:,.2f}'.format(includew, ', '.join(TRAKDOCS), DatabaseGrowthTotal/1024)+" GB\n")
+            f.write('Average growth/episode{0}{1}: {2:,.0f} KB (per episode size)'.format(includew, ', '.join(TRAKDOCS), AverageEpisodeSize*1024)+"\n")
             
             ChartTitle = 'Total Database Size (MB)'+includew+', '.join(TRAKDOCS)+' '+RunDateStart+' to '+RunDateEnd
             if INCLUDE:
                 outputFile_pdf_y = outputFile_pdf+'_'+'_'.join(TRAKDOCS)+"_Total.pdf"
             else:
                 outputFile_pdf_y = outputFile_pdf+'_Not_'+'_'.join(TRAKDOCS)+"_Total.pdf"
-            TextString = 'Database size at end : '+'{v:,.0f}'.format(v=df_result.iloc[-1]['DatabaseUsedMB']/1000)+" GB"    
+            TextString = 'Database size at end : '+'{v:,.0f}'.format(v=df_result.iloc[-1]['DatabaseUsedMB']/1024)+" GB"    
             generic_plot(df_result, 'DatabaseUsedMB', ChartTitle, "MB", outputFile_pdf_y, False, True, TextString )
             
             ChartTitle = 'Database Growth per Day'+includew+', '.join(TRAKDOCS)+' '+RunDateStart+' to '+RunDateEnd
@@ -222,7 +222,7 @@ def average_episode_size(DIRECTORY, MonitorAppFile, MonitorDatabaseFile, TRAKDOC
                 outputFile_pdf_y = outputFile_pdf+'_'+'_'.join(TRAKDOCS)+"_Growth.pdf"
             else:
                 outputFile_pdf_y = outputFile_pdf+'_Not_'+'_'.join(TRAKDOCS)+"_Growth.pdf" 
-            TextString = 'Average database growth/day : '+'{v:,.3f}'.format(v=DatabaseGrowthTotal/1000/df_result['DatabaseGrowthMB'].count())+' GB'              
+            TextString = 'Average database growth/day : '+'{v:,.3f}'.format(v=DatabaseGrowthTotal/1024/df_result['DatabaseGrowthMB'].count())+' GB'              
             generic_plot(df_result, 'DatabaseGrowthMB', ChartTitle, "MB", outputFile_pdf_y, False, False, TextString  )
         
 def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
@@ -380,14 +380,14 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         df_db_by_date.to_csv(outputFile_csv+"_Size_by_date.csv", sep=',')
 
         # Data growth 
-        TextString = 'Database size used at end : '+'{v:,.0f}'.format(v=df_db_by_date.iloc[-1]['DatabaseUsedMB']/1000)+" GB (includes CACHETEMP)\n"
+        TextString = 'Database size used at end : '+'{v:,.0f}'.format(v=df_db_by_date.iloc[-1]['DatabaseUsedMB']/1024)+" GB (includes CACHETEMP)\n"
         generic_plot(df_db_by_date, 'DatabaseUsedMB', 'Total Database Used  '+TITLEDATES, '(MB)', outputFile_pdf+"_Ttl_Database_Used.pdf", False, True, TextString )
         
         # Actual usage on disk
-        TextString = 'Database size on disk (inc Freespace) at end : '+'{v:,.0f}'.format(v=df_db_by_date.iloc[-1]['SizeinMB']/1000)+" GB (includes CACHETEMP)\n"
+        TextString = 'Database size on disk (inc Freespace) at end : '+'{v:,.0f}'.format(v=df_db_by_date.iloc[-1]['SizeinMB']/1024)+" GB (includes CACHETEMP)\n"
         generic_plot(df_db_by_date, 'SizeinMB', 'Total Database Size on Disk  '+TITLEDATES, '(MB)', outputFile_pdf+"_Ttl_Database_Size_On_Disk.pdf", False, True, TextString )
         
-        TextString = 'Database free at end : '+'{v:,.0f}'.format(v=df_db_by_date.iloc[-1]['FreeSpace']/1000)+" GB (includes CACHETEMP)\n"
+        TextString = 'Database free at end : '+'{v:,.0f}'.format(v=df_db_by_date.iloc[-1]['FreeSpace']/1024)+" GB (includes CACHETEMP)\n"
         generic_plot(df_db_by_date, 'FreeSpace', 'Total Database Freespace on Disk  '+TITLEDATES, '(MB)', outputFile_pdf+"_Ttl_Database_Free.pdf", False, True, TextString )
         
         # What are the high growth databases in this period? 
@@ -472,7 +472,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         # df_sorted = df_sorted.dropna() <--- cant use this drops too much
 
         Total_all_db=df_sorted['DatabaseUsedMB'].sum()
-        TOTAL_ALL_DB=Total_all_db/1000
+        TOTAL_ALL_DB=Total_all_db/1024
         
         df_sorted["Labels"] = np.where(df_sorted['DatabaseUsedMB']*100/Total_all_db > 2, df_sorted['Name'], '')
         
@@ -499,7 +499,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         # df_sorted = df_sorted.dropna() <--- cant use this drops too much
 
         Total_all_db=df_sorted['DatabaseUsedMB'].sum()
-        TOTAL_ALL_DB=Total_all_db/1000
+        TOTAL_ALL_DB=Total_all_db/1024
         
         df_sorted["Labels"] = np.where(df_sorted['DatabaseUsedMB']*100/Total_all_db > 2, df_sorted['Name'], '')
         
