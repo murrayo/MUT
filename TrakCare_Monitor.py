@@ -17,14 +17,13 @@ from matplotlib import pyplot as plt
 import matplotlib.dates as mdates
 from matplotlib.dates import MO, TU, WE, TH, FR, SA, SU
 
-
 import numpy as np
 import glob
 import argparse
 
 # Generic plot by date, single line, ticks on a Monday.
 
-def generic_plot(df, column, Title, yLabel, saveAs, pres=False, yzero=True, TextString=""):
+def generic_plot(df, column, Title, yLabel, saveAs, pres=False, yzero=True, TextString="", Hours=False):
 
         plt.style.use('seaborn')
         plt.figure(num=None, figsize=(10, 6), dpi=300)
@@ -39,8 +38,14 @@ def generic_plot(df, column, Title, yLabel, saveAs, pres=False, yzero=True, Text
         if pres :
             ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.2f}'))
         else :
-            ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))    
-        ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
+            ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}')) 
+               
+        if Hours:
+            ax.xaxis.set_major_locator(mdates.HourLocator(interval = 4))
+            ax.xaxis.set_major_formatter(mdates.DateFormatter('%d/%m %H:%M'))
+        else :    
+            ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
+            
         plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
         plt.text(0.01,.95,TextString, ha='left', va='center', transform=ax.transAxes, fontsize=12)
         plt.tight_layout()        
@@ -264,23 +269,52 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         
         # Remove all but last occurrences of duplicates
         df_master = df_master[~df_master.index.duplicated(keep='last')]  
-              
-        # Group by creation date     
-        df_master["Create Date"] = df_master.index
-        df_master["Create Date"] = df_master["Create Date"].dt.date           
-        df_day = df_master.groupby("Create Date").sum()
         
+        # What about journals across a day 
+        df_master["Size GB"] = df_master['Size']/(1024*1024*1024)
+              
+        # Beta - Histograms - How many journals per hour?            
+        df_master["Create Date"] = df_master.index
+        df_master["Create Hour"] = df_master["Create Date"].dt.hour
+        df_master["Create Day"] = df_master["Create Date"].dt.weekday_name
+        df_master["Journal Switch"] = np.where(df_master['Size GB']==1, 'Yes', 'No')
+        df_master["Create Date"] = df_master["Create Date"].dt.date
+
+        goBackDays = 8
+        cutoff_date = df_master["Create Date"].max() - pd.Timedelta(days=goBackDays)
+        df_last_week = df_master[df_master["Create Date"] > cutoff_date ] 
+        
+        df_last_week.to_csv(outputFile_csv+"_by_Week.csv", sep=',')
+
+        # Start and end dates to display 
+        RunDateStart = df_last_week.head(1).index.strftime('%d/%m/%Y')
+        RunDateEnd   = df_last_week.tail(1).index.strftime('%d/%m/%Y')
+        TITLEDATES = str(RunDateStart[0])+' to '+str(RunDateEnd[0])       
+
+        plt.figure(figsize=(10, 6), dpi=300)
+        plt.title('Journals Per Day (GB)  '+TITLEDATES, fontsize=14)
+        plt.tick_params(labelsize=10)  
+                
+        count_plot = sns.swarmplot(x="Create Day", y="Create Hour", data=df_last_week, hue="Reason", dodge=True)
+        fig = count_plot.get_figure()
+        fig.savefig(outputFile_pdf+"_swarm_plot.pdf") 
+        fig.clf()
+
+        # Fun over, just usual chart.... 
         # Start and end dates to display 
         RunDateStart = df_master.head(1).index.strftime('%d/%m/%Y')
         RunDateEnd   = df_master.tail(1).index.strftime('%d/%m/%Y')
         TITLEDATES = str(RunDateStart[0])+' to '+str(RunDateEnd[0])
+
+        # Group per day             
+        df_day = df_master.groupby("Create Date").sum()
         
-        df_day['Journal Size GB'] = df_day['Size']/(1024*1024*1024)
-        df_day['Journal Size GB'] = df_day['Journal Size GB'].map('{:,.0f}'.format).astype(int)
+        df_day['Journal Sum GB'] = df_day['Size']/(1024*1024*1024)
+        df_day['Journal Sum GB'] = df_day['Journal Sum GB'].map('{:,.0f}'.format).astype(int)
     
-        TextString = 'Average Journals/day : '+'{v:,.0f}'.format(v=df_day['Journal Size GB'].mean())+' GB' 
-        TextString = TextString+', Peak Journals/day : '+'{v:,.0f}'.format(v=df_day['Journal Size GB'].max())+' GB'
-        generic_plot(df_day, 'Journal Size GB', 'Journals Per Day (GB)  '+TITLEDATES, 'GB per Day', outputFile_pdf+"_per_day.pdf", False, True, TextString )
+        TextString = 'Average Journals/day : '+'{v:,.0f}'.format(v=df_day['Journal Sum GB'].mean())+' GB' 
+        TextString = TextString+', Peak Journals/day : '+'{v:,.0f}'.format(v=df_day['Journal Sum GB'].max())+' GB'
+        generic_plot(df_day, 'Journal Sum GB', 'Journals Per Day (GB)  '+TITLEDATES, 'GB per Day', outputFile_pdf+"_per_day.pdf", False, True, TextString )
         
         df_day.to_csv(outputFile_csv+"_by_Day.csv", sep=',')
 
