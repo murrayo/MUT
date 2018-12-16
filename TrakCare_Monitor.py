@@ -261,30 +261,29 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         outputFile_csv = DIRECTORY+"/all_out_csv/"+outputName     
         print("Journals: %s" % outputName)
     
-        # Read in journal details, index on create date (column 3)
+        # Read in journal details, index on create date (column 3), sort on create date
         df_master = pd.read_csv(filename, sep='\t', encoding = "ISO-8859-1", index_col=2, parse_dates=[2])
         df_master = df_master.dropna(axis=1, how='all') 
-          
         df_master.sort_index(inplace=True)
         
-        # Remove all but last occurrences of duplicates
+        # Remove all but last occurrences of duplicates, each day includes all inc previous days
         df_master = df_master[~df_master.index.duplicated(keep='last')]  
         
-        # What about journals across a day 
+        # Lets make display easier with a GB display 
         df_master["Size GB"] = df_master['Size']/(1024*1024*1024)
               
-        # Beta - Histograms - How many journals per hour?            
+        # Beta - some seaborne Histograms - How are the journals distributed across the day?
+        # Create some new columns to make display easier        
         df_master["Create Date"] = df_master.index
         df_master["Create Hour"] = df_master["Create Date"].dt.hour
         df_master["Create Day"] = df_master["Create Date"].dt.weekday_name
-        df_master["Journal Switch"] = np.where(df_master['Size GB']==1, 'Yes', 'No')
         df_master["Create Date"] = df_master["Create Date"].dt.date
 
-        goBackDays = 8
+        goBackDays = 8 # Could be smarter here, depends if collection ends am or pm
         cutoff_date = df_master["Create Date"].max() - pd.Timedelta(days=goBackDays)
         df_last_week = df_master[df_master["Create Date"] > cutoff_date ] 
         
-        df_last_week.to_csv(outputFile_csv+"_by_Week.csv", sep=',')
+        df_last_week.to_csv(outputFile_csv+"_Last_Week.csv", sep=',')
 
         # Start and end dates to display 
         RunDateStart = df_last_week.head(1).index.strftime('%d/%m/%Y')
@@ -292,7 +291,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         TITLEDATES = str(RunDateStart[0])+' to '+str(RunDateEnd[0])       
 
         plt.figure(figsize=(10, 6), dpi=300)
-        plt.title('Journals Per Day (GB)  '+TITLEDATES, fontsize=14)
+        plt.title('Journals switches across day  '+TITLEDATES, fontsize=14)
         plt.tick_params(labelsize=10)  
                 
         count_plot = sns.swarmplot(x="Create Day", y="Create Hour", data=df_last_week, hue="Reason", dodge=True)
