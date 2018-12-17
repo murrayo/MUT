@@ -63,7 +63,7 @@ do	echo "File: ${f}"
 	cd ${Directoryname} # We want output with the html file
 	    
 	if [[ "$Windows" != "" ]]; then   
-	    yape -c --mgstat --permon --prefix "${fileName}_" ${Filename}
+	    yape -c --mgstat --perfmon --prefix "${fileName}_" "${Filename}"
 	else
 	    yape -c --mgstat --vmstat --iostat --prefix "${fileName}_" --plotDisks "${intreasting_disks}" ${Filename}
 	fi    
