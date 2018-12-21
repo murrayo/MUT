@@ -443,7 +443,6 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         plt.figure(num=None, figsize=(10, 6), dpi=300)
         index = np.arange(len(df_databases_by_growth['Database'].head(TopNDatabaseByGrowth)))
         
-        # df_databases_by_growth
         plt.barh(df_databases_by_growth['Database'].head(TopNDatabaseByGrowth), df_databases_by_growth['Growth MB'].head(10))
 
         plt.title('Top '+str(TopNDatabaseByGrowth)+' - Database Growth  '+TITLEDATES, fontsize=14)
@@ -455,8 +454,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         plt.tight_layout()
         plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowth)+"_Bar.pdf", format='pdf')
         plt.close()     
-        
-        
+              
         # Growth of top n databases over time (not stacked)
         df_master_db['Date'] = pd.to_datetime(df_master_db['Date']) # Convert text field to date time
         
@@ -500,11 +498,14 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         df_sorted["Labels"] = np.where(df_sorted['DatabaseUsedMB']*100/Total_all_db > 2, df_sorted['Name'], '')
         
         plt.style.use('seaborn')
+        current_palette_10 = sns.color_palette("Paired", 10)
+        sns.set_palette(current_palette_10)
+
         plt.figure(num=None, figsize=(10, 6), dpi=300)
         pie_exp = tuple(0.1 if i < 2 else 0 for i in range(df_sorted['Name'].count())) # Pie explode 
         
         plt.pie(df_sorted['DatabaseUsedMB'], labels = df_sorted["Labels"], autopct=make_autopct(df_sorted['DatabaseUsedMB']), startangle=60, explode=pie_exp, shadow=True)
-        plt.title('Top Database Sizes at '+str(FirstDay)+' - Total '+'{v:,.0f}'.format(v=TOTAL_ALL_DB)+' GB' , fontsize=14)
+        plt.title('Top Database Sizes at Start '+str(FirstDay)+' - Total '+'{v:,.0f}'.format(v=TOTAL_ALL_DB)+' GB' , fontsize=14)
         
         plt.axis('equal')
         plt.tight_layout()
@@ -675,7 +676,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
             df_master_gb['DataBasePath'].replace("__", "",inplace=True, regex=True)
             
             df_master_gb['Full_Global'] = df_master_gb['DataBasePath'].str[1:]+df_master_gb['GlobalName']
-            df_master_gb["SizeAllocatedMB"] = df_master_gb["SizeAllocated"]/1024
+            df_master_gb["SizeAllocatedGB"] = df_master_gb["SizeAllocated"]/1024
      
             # Get unique names and use that as a key to create a new dataframe per global
             df_globals = pd.DataFrame({'Full_Global':df_master_gb.Full_Global.unique()}) # Get unique names
@@ -717,6 +718,9 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
             # Lets see the highest growth globals - bar chart
         
             plt.style.use('seaborn')
+            current_palette_10 = sns.color_palette("Paired", TopNDatabaseByGrowth)
+            sns.set_palette(current_palette_10)
+
             plt.figure(num=None, figsize=(10, 6), dpi=300)
             index = np.arange(len(df_globals_by_growth['Full_Global'].head(TopNDatabaseByGrowth)))
             plt.barh(df_globals_by_growth['Full_Global'].head(TopNDatabaseByGrowth), df_globals_by_growth['Growth Size'].head(TopNDatabaseByGrowth))
@@ -731,22 +735,26 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
             plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowth)+".pdf", format='pdf')
             plt.close()     
             
-            
+           
             # Growth of top n globals - Not Stacked
-            
+                    
             df_master_gb['Date'] = pd.to_datetime(df_master_gb['Date'])
+        
             grpd = df_master_gb.groupby('Full_Global') 
 
             plt.style.use('seaborn')
+            current_palette_10 = sns.color_palette("Paired", TopNDatabaseByGrowth)
+            sns.set_palette(current_palette_10)
+
             plt.figure(num=None, figsize=(10, 6), dpi=300)
                 
             for name, data in grpd:        
                 if name in top_List:        
-                    plt.plot(data.Date.values, data.SizeAllocated.values, '-', label = name)
+                    plt.plot(data.Date.values, data.SizeAllocatedGB.values, '-', label = name)
             plt.legend(loc='best')
     
             plt.title('Top Growth Globals Over Period  '+TITLEDATES, fontsize=14)
-            plt.ylabel('MB', fontsize=10)
+            plt.ylabel('GB', fontsize=10)
             plt.tick_params(labelsize=10)       
             ax = plt.gca()
             ax.set_ylim(ymin=0)  # Always zero start
@@ -754,7 +762,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
             ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
             plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
             plt.tight_layout()
-            plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowthStack)+"_Growth.pdf", format='pdf')
+            plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowth)+"_Growth.pdf", format='pdf')
             plt.close()        
             
             # Print the full history of the top N globals
@@ -768,9 +776,41 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
             for full_name in top_List :
                 df_gb_top_ind = df_master_gb[df_master_gb.Full_Global == full_name ]            
                 
-                TextString = 'Global size on disk at end : '+'{v:,.0f}'.format(v=df_gb_top_ind.iloc[-1]['SizeAllocatedMB'])+" MB "+full_name
-                generic_plot(df_gb_top_ind, 'SizeAllocatedMB', 'Total Global Size on Disk _'+TITLEDATES, '(MB)', outputFile_pdf+"_"+str(x)+"_Ttl_Global_Size_On_Disk"+full_name+".pdf", True, True, TextString )
+                TextString = 'Global size on disk at end : '+'{v:,.0f}'.format(v=df_gb_top_ind.iloc[-1]['SizeAllocatedGB'])+" GB "+full_name
+                generic_plot(df_gb_top_ind, 'SizeAllocatedGB', 'Total Global Size on Disk _'+TITLEDATES, '(GB)', outputFile_pdf+"_"+str(x)+"_Ttl_Global_Size_On_Disk"+full_name+".pdf", False, True, TextString )
                 x = x+1              
+
+
+            # PIE use summary list "End Size"
+            # Last day of sample period
+            if False:
+                LastDay=df_master_gb['Date'].iloc[-1]
+                df_temp = df_master_gb.loc[df_master_gb['Date'] == LastDay] 
+
+                df_sorted = df_temp.sort_values(by=['SizeAllocatedGB'], ascending=False )
+                df_sorted.to_csv(outputFile_csv+"_pie.csv", sep=',', index=False)
+        
+                # Drop rows with unmounted databases - size shows up as NaN
+                # df_sorted = df_sorted.dropna() <--- cant use this drops too much
+
+                Total_all_GB=df_sorted['SizeAllocatedGB'].sum()
+        
+                df_sorted["Labels"] = np.where(df_sorted['SizeAllocatedGB']*100/Total_all_db > 2, df_sorted['Full_Global'], '')
+        
+                plt.style.use('seaborn')
+                current_palette_10 = sns.color_palette("Paired", 12)
+                sns.set_palette(current_palette_10)
+                plt.figure(num=None, figsize=(10, 6), dpi=300)
+            
+                pie_exp = tuple(0.1 if i < 2 else 0 for i in range(df_sorted['Name'].count())) # Pie explode 
+        
+                plt.pie(df_sorted['DatabaseUsedMB'], labels = df_sorted["Labels"], autopct=make_autopct(df_sorted['SizeAllocatedGB']), startangle=60, explode=pie_exp, shadow=True)
+                plt.title('Top Global Sizes at '+str(LastDay)+' - Total '+'{v:,.0f}'.format(v=TOTAL_ALL_GB)+' GB' , fontsize=14)
+        
+                plt.axis('equal')
+                plt.tight_layout()
+                plt.savefig(outputFile_pdf+"_Total_GB_Size_Pie_End.pdf")
+                plt.close()
 
     # Page Summary
     
