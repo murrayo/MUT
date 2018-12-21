@@ -4,8 +4,8 @@
 # Source data must be exported from the TrakCare Monitor Tool
 
 # Example usage: TrakCare_Monitor.py -d directory [-l list of databases to include/exclude from episode size] -g 
-#                Globals take a minute or so to process, explicitly request with -g 
-# example: TrakCare_Monitor.py -d SINO_monitor -l TRAK-DOCUMENT TRAK-MONITOR -g 
+#                Globals take a minute or so to process, explicitly exclude with -g 
+# example: TrakCare_Monitor.py -d SINO_monitor -l TRAK-DOCUMENT TRAK-MONITOR 
 
 import os
 import pandas as pd
@@ -20,6 +20,8 @@ from matplotlib.dates import MO, TU, WE, TH, FR, SA, SU
 import numpy as np
 import glob
 import argparse
+
+import csv
 
 # Generic plot by date, single line, ticks on a Monday.
 
@@ -166,7 +168,7 @@ def average_episode_size(DIRECTORY, MonitorAppFile, MonitorDatabaseFile, TRAKDOC
     RunDateEnd = RunDateEnd[0].strftime('%d/%m/%Y')
 
     plt.style.use('seaborn')
-    plt.figure(num=None, figsize=(10, 6), dpi=80)
+    plt.figure(num=None, figsize=(10, 6), dpi=300)
     plt.plot(df_result['AvgEpisodeSizeMB'])
     plt.title('Average Episode Size '+RunDateStart+' - '+RunDateEnd, fontsize=14)
     plt.tick_params(labelsize=10)
@@ -349,7 +351,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         # Example of multiple charts. To do; Make this a function to accept any number of items
         
         plt.style.use('seaborn')
-        plt.figure(num=None, figsize=(10, 6), dpi=80)
+        plt.figure(num=None, figsize=(10, 6), dpi=300)
         
         plt.plot(df_master_ep['EpisodeCountTotal'], label='Total Episodes Per Day')
         plt.plot(df_master_ep['OrderCountTotal'], label='Total Orders Per Day')
@@ -367,27 +369,15 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         plt.savefig(outputFile_pdf+"_Ttl_Episodes_Orders.pdf", format='pdf')
         plt.close()        
 
-        #plt.style.use('seaborn')
-        #plt.figure(num=None, figsize=(10, 6), dpi=80)
+        # What are the busiest days?
+        df_master_ep["Day"] = df_master_ep.index.to_series().dt.weekday_name
         
-        #plt.plot(df_master_ep['EpisodeCountEmergency'], label='Emergency')
-        #plt.plot(df_master_ep['EpisodeCountInpatient'], label='Inpatient')
-        #plt.plot(df_master_ep['EpisodeCountOutpatient'], label='Outpatient')
-        #plt.plot(df_master_ep['EpisodeCountTotal'], label='Total Episodes')
-        #plt.legend(loc='best')
-        
-        #plt.title('Episodes by Type', fontsize=14)
-        #plt.ylabel('Count', fontsize=10)
-        #plt.tick_params(labelsize=10)       
-        #ax = plt.gca()
-        #ax.set_ylim(ymin=0)  # Always zero start
-        #ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
-        #ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
-        #plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
-        #plt.tight_layout()
-        #plt.savefig(outputFile_pdf+"_All_Episodes.pdf")
-        #plt.close()       
+        plt.title('Episodes by Day '+TITLEDATES, fontsize=14)
+        plt.tick_params(labelsize=10)  
                 
+        count_plot = sns.swarmplot(x="Day", y="EpisodeCountTotal", data=df_master_ep)
+        fig = count_plot.get_figure()
+        fig.savefig(outputFile_pdf+"_swarm_plot.pdf")        
            
     # Databases  -------------------------------------------------------------------------
     # Total by day and output full list, by day list, top n growth and chart top n growth
@@ -442,24 +432,24 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
             df_master_db.loc[df_master_db['Name'] == row['Name']].to_csv(DIRECTORY+"/all_database/Database_"+row['Name']+".csv", sep=',', index=False)    
 
         # Lets see growth over sample period in some charts    
-        df_out = pd.DataFrame(lst, columns=cols).sort_values(by=['Growth MB'], ascending=False)                    
-        df_out.to_csv(outputFile_csv+".csv", sep=',', index=False)  
+        df_databases_by_growth = pd.DataFrame(lst, columns=cols).sort_values(by=['Growth MB'], ascending=False)                    
+        df_databases_by_growth.to_csv(outputFile_csv+".csv", sep=',', index=False)  
         
-        # What are the top N databses by growth? df_out will hold the sorted list
-        df_out.head(TopNDatabaseByGrowth).to_csv(outputFile_csv+"_top_"+str(TopNDatabaseByGrowth)+".csv", sep=',', index=False)
+        # What are the top N databses by growth? df_databases_by_growth will hold the sorted list
+        df_databases_by_growth.head(TopNDatabaseByGrowth).to_csv(outputFile_csv+"_top_"+str(TopNDatabaseByGrowth)+".csv", sep=',', index=False)
         
         # Bar chart - top N Total Growth
         plt.style.use('seaborn')
-        plt.figure(num=None, figsize=(10, 6), dpi=80)
-        index = np.arange(len(df_out['Database'].head(TopNDatabaseByGrowth)))
+        plt.figure(num=None, figsize=(10, 6), dpi=300)
+        index = np.arange(len(df_databases_by_growth['Database'].head(TopNDatabaseByGrowth)))
         
-        # df_out
-        plt.barh(df_out['Database'].head(TopNDatabaseByGrowth), df_out['Growth MB'].head(10))
+        # df_databases_by_growth
+        plt.barh(df_databases_by_growth['Database'].head(TopNDatabaseByGrowth), df_databases_by_growth['Growth MB'].head(10))
 
         plt.title('Top '+str(TopNDatabaseByGrowth)+' - Database Growth  '+TITLEDATES, fontsize=14)
         plt.xlabel('Growth over period (MB)', fontsize=10)
         plt.tick_params(labelsize=10)  
-        plt.yticks(index, df_out['Database'].head(TopNDatabaseByGrowth), fontsize=10)
+        plt.yticks(index, df_databases_by_growth['Database'].head(TopNDatabaseByGrowth), fontsize=10)
         ax = plt.gca()
         ax.xaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
         plt.tight_layout()
@@ -470,16 +460,16 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         # Growth of top n databases over time (not stacked)
         df_master_db['Date'] = pd.to_datetime(df_master_db['Date']) # Convert text field to date time
         
-        top_List = df_out['Database'].head(TopNDatabaseByGrowthStack).tolist()
+        top_List = df_databases_by_growth['Database'].head(TopNDatabaseByGrowthStack).tolist()
         grpd = df_master_db.groupby('Name') 
 
         plt.style.use('seaborn')
-        plt.figure(num=None, figsize=(10, 6), dpi=80)
+        plt.figure(num=None, figsize=(10, 6), dpi=300)
             
         for name, data in grpd:        
             if name in top_List:        
                 plt.plot(data.Date.values, data.DatabaseUsedMB.values, '-', label = name)
-                
+
         plt.title('Top Growth Databases (Not Stacked)  '+TITLEDATES, fontsize=14)
         plt.ylabel('MB', fontsize=10)
         plt.tick_params(labelsize=10) 
@@ -510,7 +500,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         df_sorted["Labels"] = np.where(df_sorted['DatabaseUsedMB']*100/Total_all_db > 2, df_sorted['Name'], '')
         
         plt.style.use('seaborn')
-        plt.figure(num=None, figsize=(10, 6), dpi=80)
+        plt.figure(num=None, figsize=(10, 6), dpi=300)
         pie_exp = tuple(0.1 if i < 2 else 0 for i in range(df_sorted['Name'].count())) # Pie explode 
         
         plt.pie(df_sorted['DatabaseUsedMB'], labels = df_sorted["Labels"], autopct=make_autopct(df_sorted['DatabaseUsedMB']), startangle=60, explode=pie_exp, shadow=True)
@@ -537,7 +527,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         df_sorted["Labels"] = np.where(df_sorted['DatabaseUsedMB']*100/Total_all_db > 2, df_sorted['Name'], '')
         
         plt.style.use('seaborn')
-        plt.figure(num=None, figsize=(10, 6), dpi=80)
+        plt.figure(num=None, figsize=(10, 6), dpi=300)
         pie_exp = tuple(0.1 if i < 2 else 0 for i in range(df_sorted['Name'].count())) # Pie explode 
         
         plt.pie(df_sorted['DatabaseUsedMB'], labels = df_sorted["Labels"], autopct=make_autopct(df_sorted['DatabaseUsedMB']), startangle=60, explode=pie_exp, shadow=True)
@@ -548,34 +538,73 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         plt.savefig(outputFile_pdf+"_Total_DB_Size_Pie_End.pdf")
         plt.close()
 
-        # Stacked Chart is a good way to look at Top N
+        # Stacked Chart is a good way to look at Top N- this was more painful than I expected, but hey, its to hot to go outside.
         
-        top_List = df_out['Database'].head(TopNDatabaseByGrowthStack).tolist()
+        # Because a stacked chart is built with python lists if the value list does not have data for a date 
+        # (eg DB did not exist on a date) stackplot will fail because there is not a value for each xaxis date.
+        # Also the lists will get out of synch.
+        # So need to substitue zero for all items for date when there is no data (eg the db did not exist)
+        # an example is a newly created audit database
+        
+        # Start by getting a list of top database names by growth, and a dataframe with just them in it
+        
+        top_List = df_databases_by_growth['Database'].head(TopNDatabaseByGrowthStack).tolist()
         df_top_List = df_master_db[df_master_db['Name'].isin( top_List )]
         
-        dates = pd.DataFrame({'Date':df_master_db.Date.unique()}) # Get unique database names in list
+        # We only care about a few columns
+        df_top_List = df_top_List.filter(["Date", "Name", "DatabaseUsedMB"], axis=1)
+        # Lets make the lookup easier
+        df_top_List["Date_Name"] = df_top_List["Date"].map(str)+df_top_List["Name"]
         
-        # Build some lists to plot
+        # Get unique dates in list
+        dates = pd.DataFrame({'Date':df_top_List.Date.unique()}) 
         dates = dates['Date'].tolist()
         
-        Lists = {} # Dictionary to hold top N database Names and sizes over time
+        # If there are databases missing for a date create a 0 row
+        # Create new rows in lists first (appending each one individually to df is slow)
+        Date_append_list           = []
+        Name_append_list           = []
+        DatabaseUsedMB_append_list = []
+        Date_Name_append_list      = []
+        
+        for unique_date in dates:
+            for name in top_List:
+                # If not found create row
+                if ~df_top_List["Date_Name"].str.contains(str(unique_date)+name).any():
+                    Date_append_list.append(unique_date)
+                    Name_append_list.append(name)
+                    DatabaseUsedMB_append_list.append(0)
+                    Date_Name_append_list.append(str(unique_date)+name)    
+        
+        df_top_List = df_top_List.append(pd.DataFrame({'Date': Date_append_list, 'Name': Name_append_list, 'DatabaseUsedMB': DatabaseUsedMB_append_list, 'Date_Name': Date_Name_append_list}), sort=False)
+        
+        # Sort the dataframe, won't use an index
+        df_top_List.sort_values(by=['Date', 'Name'], inplace=True)
+        
+        # Now finish building the lists for the stackplot
+        
+        # {Dictionary} to hold top N database Names and sizes over time
+        # {'TRAK_MONITOR': [1930, 4000, 7376, 10886, 14263, etc....], 'TRAK_DOCS': [924247,....]}
+        Lists = {} 
 
+        # Create a list for each database in the top list     
         for i in top_List:
             df_A = df_top_List[df_top_List['Name'] == i]
             listName = i.replace('-', '_') # Dashes screw with Python    
             Lists[listName] = df_A['DatabaseUsedMB'].tolist()
         
+        # Build new list of values from dictionary
         all_keys=[]
-        all_items=[]
+        all_values=[]
         for i,j in Lists.items():
             all_keys.append(i)
-            all_items.append(j)
+            all_values.append(j)
             
         pal = sns.color_palette("Set1")
         plt.style.use('seaborn')
-        plt.figure(num=None, figsize=(10, 6), dpi=80)
+        plt.figure(num=None, figsize=(10, 6), dpi=300)
 
-        plt.stackplot(dates, all_items, labels=all_keys, colors=pal, alpha=0.5)
+        plt.stackplot(dates, all_values, labels=all_keys, colors=pal, alpha=0.5)
 
         plt.title('Top '+str(TopNDatabaseByGrowthStack)+' - Database Growth  '+TITLEDATES, fontsize=14)
         plt.ylabel('MB', fontsize=10)
@@ -587,10 +616,11 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
         plt.tight_layout()
         plt.legend(loc='upper left')    
-        
+    
         plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowthStack)+"_Growth_Time_Stack.pdf", format='pdf')
         plt.close()
         
+        df_top_List.to_csv(outputFile_csv+"_top_list.csv", sep=',', index=False)
         
     # Average Episode size is good to know  - Merge Episodes and Database growth (grouped by date) 
 
@@ -614,7 +644,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
 
     # Globals - takes a while, explicitly run it with -g option -------------------------
     
-    if Do_Globals :
+    if not Do_Globals :
     
         for filename in MonitorGlobalsName:
         
@@ -645,66 +675,70 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
             df_master_gb['DataBasePath'].replace("__", "",inplace=True, regex=True)
             
             df_master_gb['Full_Global'] = df_master_gb['DataBasePath'].str[1:]+df_master_gb['GlobalName']
+            df_master_gb["SizeAllocatedMB"] = df_master_gb["SizeAllocated"]/1024
      
             # Get unique names and use that as a key to create a new dataframe per global
-        
             df_globals = pd.DataFrame({'Full_Global':df_master_gb.Full_Global.unique()}) # Get unique names
+
+            # Sort the dataframe, won't use an index - just to be sure
+            df_master_gb.sort_values(by=['Date', 'Full_Global'], inplace=True)
 
             cols = ['Full_Global', 'Start Size', 'End Size' ,'Growth Size']
             lst = []
 
-            print('Please wait while globals growth calculated')
+            print('Please wait while globals growth calculated, this may take a while -- there a lot of them')
             dots = '.'
         
+            # Iterate over all the rows in the dataframe. Returns index and the whole row. 
             for index, row in df_globals.iterrows():
-
+                
+                # For each row create a temporary dataframe with just that globals first and last rows.  
                 df_temp = df_master_gb.loc[df_master_gb['Full_Global'] == row['Full_Global']].iloc[[0, -1]]
-    
-                lst.append([row['Full_Global'],df_temp['SizeAllocated'].iloc[0],df_temp['SizeAllocated'].iloc[1],df_temp['SizeAllocated'].iloc[1] - df_temp['SizeAllocated'].iloc[0]])
 
-                df_master_gb.loc[df_master_gb['Full_Global'] == row['Full_Global']].to_csv(DIRECTORY+"/all_globals/Globals_"+row['Full_Global']+".csv", sep=',', index=False)   
-                        
+                # Create a list with full name, size at start, size at end (only 2 rows in df (0 and 1)), and difference (growth)
+                lst.append([row['Full_Global'],df_temp['SizeAllocated'].iloc[0],df_temp['SizeAllocated'].iloc[1],df_temp['SizeAllocated'].iloc[1] - df_temp['SizeAllocated'].iloc[0]])                        
+
+                # Something to look at
                 dots+='.'     
                 if dots == '..............':
                     dots = '.'
-            
                 print('\r'+dots, end='')
-
             print('\n')
             
-            df_out = pd.DataFrame(lst, columns=cols).sort_values(by=['Growth Size'], ascending=False)    
-            df_out.to_csv(outputFile_csv+".csv", sep=',', index=False)
+            # Create a dataframe with just the rows and columns we care about
+            df_globals_by_growth = pd.DataFrame(lst, columns=cols).sort_values(by=['Growth Size'], ascending=False)    
+            df_globals_by_growth.to_csv(outputFile_csv+".csv", sep=',', index=False)
             
-            df_out.head(TopNDatabaseByGrowth).to_csv(outputFile_csv+"_top_"+str(TopNDatabaseByGrowth)+".csv", sep=',', index=False)
+            df_globals_by_growth.head(TopNDatabaseByGrowth).to_csv(outputFile_csv+"_top_"+str(TopNDatabaseByGrowth)+".csv", sep=',', index=False)
         
-        
+            # Get a list of the top N globals
+            top_List = df_globals_by_growth['Full_Global'].head(TopNDatabaseByGrowth).tolist()
+                
             # Lets see the highest growth globals - bar chart
         
             plt.style.use('seaborn')
-            plt.figure(num=None, figsize=(10, 6), dpi=80)
-            index = np.arange(len(df_out['Full_Global'].head(TopNDatabaseByGrowth)))
-            plt.barh(df_out['Full_Global'].head(TopNDatabaseByGrowth), df_out['Growth Size'].head(TopNDatabaseByGrowth))
+            plt.figure(num=None, figsize=(10, 6), dpi=300)
+            index = np.arange(len(df_globals_by_growth['Full_Global'].head(TopNDatabaseByGrowth)))
+            plt.barh(df_globals_by_growth['Full_Global'].head(TopNDatabaseByGrowth), df_globals_by_growth['Growth Size'].head(TopNDatabaseByGrowth))
 
             plt.title('Top '+str(TopNDatabaseByGrowth)+' - Globals by Growth  '+TITLEDATES, fontsize=14)
             plt.xlabel('Growth over period (MB)', fontsize=10)
             plt.tick_params(labelsize=10)  
-            plt.yticks(index, df_out['Full_Global'].head(TopNDatabaseByGrowth), fontsize=10)
+            plt.yticks(index, df_globals_by_growth['Full_Global'].head(TopNDatabaseByGrowth), fontsize=10)
             ax = plt.gca()
             ax.xaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
             plt.tight_layout()
-            plt.savefig(outputFile_pdf+"_Top_20.pdf", format='pdf')
+            plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowth)+".pdf", format='pdf')
             plt.close()     
             
             
-            # Growth of top n globals - Stack
+            # Growth of top n globals - Not Stacked
             
             df_master_gb['Date'] = pd.to_datetime(df_master_gb['Date'])
-            
-            top_List = df_out['Full_Global'].head(TopNDatabaseByGrowthStack).tolist()
             grpd = df_master_gb.groupby('Full_Global') 
 
             plt.style.use('seaborn')
-            plt.figure(num=None, figsize=(10, 6), dpi=80)
+            plt.figure(num=None, figsize=(10, 6), dpi=300)
                 
             for name, data in grpd:        
                 if name in top_List:        
@@ -722,6 +756,21 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
             plt.tight_layout()
             plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowthStack)+"_Growth.pdf", format='pdf')
             plt.close()        
+            
+            # Print the full history of the top N globals
+            for full_name in top_List:
+                df_master_gb.loc[df_master_gb['Full_Global'] == full_name].to_csv(DIRECTORY+"/all_globals/Globals_"+full_name+".csv", sep=',', index=False)   
+               
+            # Set date index for individual plots
+            df_master_gb.set_index('Date',inplace=True)
+                
+            x=0
+            for full_name in top_List :
+                df_gb_top_ind = df_master_gb[df_master_gb.Full_Global == full_name ]            
+                
+                TextString = 'Global size on disk at end : '+'{v:,.0f}'.format(v=df_gb_top_ind.iloc[-1]['SizeAllocatedMB'])+" MB "+full_name
+                generic_plot(df_gb_top_ind, 'SizeAllocatedMB', 'Total Global Size on Disk _'+TITLEDATES, '(MB)', outputFile_pdf+"_"+str(x)+"_Ttl_Global_Size_On_Disk"+full_name+".pdf", True, True, TextString )
+                x = x+1              
 
     # Page Summary
     
