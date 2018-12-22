@@ -27,14 +27,22 @@ import csv
 
 def generic_plot(df, column, Title, yLabel, saveAs, pres=False, yzero=True, TextString="", Hours=False):
 
+        colormapName = "Set1"
+        
         plt.style.use('seaborn')
         plt.figure(num=None, figsize=(10, 6), dpi=300)
-        plt.plot(df[column])
+        sns.set_style("whitegrid")
+        palette = plt.get_cmap(colormapName)
+        color=palette(1)
+
+        plt.plot(df[column], color=color, alpha=0.7)
         plt.title(Title, fontsize=14)
         plt.ylabel(yLabel, fontsize=10)
         plt.tick_params(labelsize=10)  
     
         ax = plt.gca()
+        ax.grid(which='major', axis='both', linestyle='--') 
+        
         if yzero:
                 ax.set_ylim(ymin=0)  # Always zero start                
         if pres :
@@ -60,10 +68,12 @@ def generic_top_n(df_sort, TopN, df_master_ps, plot_what, Title, yLabel, saveAs,
         grpd = df_master_ps.groupby('pName') 
 
         plt.style.use('seaborn')
+        plt.figure(num=None, figsize=(10, 6), dpi=300)
+        sns.set_style("whitegrid")
+        
         current_palette_10 = sns.color_palette("Paired", TopN)
         sns.set_palette(current_palette_10)
-      
-        plt.figure(num=None, figsize=(10, 6), dpi=300)         
+             
         for name, data in grpd:        
             if name in top_List:        
                 plt.plot(data.Date.values, data.eval(plot_what).values, '-', label = name)
@@ -238,6 +248,16 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
     TopNDatabaseByGrowth    = 10
     TopNDatabaseByGrowthPie = 5
     TopNDatabaseByGrowthStack = 6
+    
+    colormapName = "Set1"
+    #plt.style.use('seaborn')
+    #plt.figure(num=None, figsize=(10, 6), dpi=300)
+    #sns.set_style("whitegrid")
+    #palette = plt.get_cmap(colormapName)
+    #color=palette(1)
+    #plt.plot(df_master['CPU'], color=color, alpha=0.7)
+    #ax.grid(which='major', axis='both', linestyle='--') 
+
     
     # Get list of files in directory, can have multiples of same type if follow regex
     MonitorAppName=glob.glob(DIRECTORY+'/*MonitorApp.txt')
@@ -601,16 +621,20 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
             all_keys.append(i)
             all_values.append(j)
             
-        pal = sns.color_palette("Set1")
+            
         plt.style.use('seaborn')
         plt.figure(num=None, figsize=(10, 6), dpi=300)
+        sns.set_style("whitegrid")
+        palette = plt.get_cmap(colormapName)
+        palette_cycle = sns.color_palette("Set1")
 
-        plt.stackplot(dates, all_values, labels=all_keys, colors=pal, alpha=0.5)
+        plt.stackplot(dates, all_values, labels=all_keys, colors=palette_cycle, alpha=0.5)
 
         plt.title('Top '+str(TopNDatabaseByGrowthStack)+' - Database Growth  '+TITLEDATES, fontsize=14)
         plt.ylabel('MB', fontsize=10)
         plt.tick_params(labelsize=10)  
         ax = plt.gca()
+        ax.grid(which='major', axis='both', linestyle='--') 
         ax.set_ylim(ymin=0)  # Always zero start
         ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
         ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
@@ -675,15 +699,17 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
             df_master_gb['DataBasePath'].replace("/", "_",inplace=True, regex=True)
             df_master_gb['DataBasePath'].replace("__", "",inplace=True, regex=True)
             
+            # Add full path name, Size recalculated in GB
             df_master_gb['Full_Global'] = df_master_gb['DataBasePath'].str[1:]+df_master_gb['GlobalName']
             df_master_gb["SizeAllocatedGB"] = df_master_gb["SizeAllocated"]/1024
      
             # Get unique names and use that as a key to create a new dataframe per global
             df_globals = pd.DataFrame({'Full_Global':df_master_gb.Full_Global.unique()}) # Get unique names
 
-            # Sort the dataframe, won't use an index - just to be sure
+            # Sort the dataframe, won't use an index - just to be sure it stil in date order
             df_master_gb.sort_values(by=['Date', 'Full_Global'], inplace=True)
 
+            # Create a summary dataframe that can be sorted
             cols = ['Full_Global', 'Start Size', 'End Size' ,'Growth Size']
             lst = []
 
@@ -701,7 +727,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
 
                 # Something to look at
                 dots+='.'     
-                if dots == '..............':
+                if dots == '.........................................................':
                     dots = '.'
                 print('\r'+dots, end='')
             print('\n')
@@ -735,9 +761,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
             plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowth)+".pdf", format='pdf')
             plt.close()     
             
-           
             # Growth of top n globals - Not Stacked
-                    
             df_master_gb['Date'] = pd.to_datetime(df_master_gb['Date'])
         
             grpd = df_master_gb.groupby('Full_Global') 
@@ -780,37 +804,31 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
                 generic_plot(df_gb_top_ind, 'SizeAllocatedGB', 'Total Global Size on Disk _'+TITLEDATES, '(GB)', outputFile_pdf+"_"+str(x)+"_Ttl_Global_Size_On_Disk"+full_name+".pdf", False, True, TextString )
                 x = x+1              
 
-
-            # PIE use summary list "End Size"
-            # Last day of sample period
-            if False:
-                LastDay=df_master_gb['Date'].iloc[-1]
-                df_temp = df_master_gb.loc[df_master_gb['Date'] == LastDay] 
-
-                df_sorted = df_temp.sort_values(by=['SizeAllocatedGB'], ascending=False )
-                df_sorted.to_csv(outputFile_csv+"_pie.csv", sep=',', index=False)
-        
-                # Drop rows with unmounted databases - size shows up as NaN
-                # df_sorted = df_sorted.dropna() <--- cant use this drops too much
-
-                Total_all_GB=df_sorted['SizeAllocatedGB'].sum()
-        
-                df_sorted["Labels"] = np.where(df_sorted['SizeAllocatedGB']*100/Total_all_db > 2, df_sorted['Full_Global'], '')
-        
-                plt.style.use('seaborn')
-                current_palette_10 = sns.color_palette("Paired", 12)
-                sns.set_palette(current_palette_10)
-                plt.figure(num=None, figsize=(10, 6), dpi=300)
+            # PIE chart of total global size
+            #--------------------------------
             
-                pie_exp = tuple(0.1 if i < 2 else 0 for i in range(df_sorted['Name'].count())) # Pie explode 
+            # Sort the summary dataframe by End Size
+            df_sorted = df_globals_by_growth.sort_values(by=['End Size'], ascending=False)        
+            df_sorted.to_csv(outputFile_csv+"_pie.csv", sep=',', index=False)
+
+            Total_all_gb=df_sorted['End Size'].sum()
+    
+            df_sorted["Labels"] = np.where(df_sorted['End Size']*100/Total_all_gb > 2, df_sorted['Full_Global'], '')
+    
+            plt.style.use('seaborn')
+            current_palette_10 = sns.color_palette("Paired", 12)
+            sns.set_palette(current_palette_10)
+            plt.figure(num=None, figsize=(10, 6), dpi=300)
         
-                plt.pie(df_sorted['DatabaseUsedMB'], labels = df_sorted["Labels"], autopct=make_autopct(df_sorted['SizeAllocatedGB']), startangle=60, explode=pie_exp, shadow=True)
-                plt.title('Top Global Sizes at '+str(LastDay)+' - Total '+'{v:,.0f}'.format(v=TOTAL_ALL_GB)+' GB' , fontsize=14)
-        
-                plt.axis('equal')
-                plt.tight_layout()
-                plt.savefig(outputFile_pdf+"_Total_GB_Size_Pie_End.pdf")
-                plt.close()
+            pie_exp = tuple(0.1 if i < 2 else 0 for i in range(df_sorted['Full_Global'].count())) # Pie explode 
+    
+            plt.pie(df_sorted['End Size'], labels = df_sorted["Labels"], autopct=make_autopct(df_sorted['End Size']), startangle=60, explode=pie_exp, shadow=True)
+            plt.title('Top Global Sizes at '+str(LastDay)+' - Total '+'{v:,.0f}'.format(v=Total_all_gb  /1024)+' GB' , fontsize=14)
+    
+            plt.axis('equal')
+            plt.tight_layout()
+            plt.savefig(outputFile_pdf+"_Total_global_Size_Pie_End.pdf")
+            plt.close()
 
     # Page Summary
     
