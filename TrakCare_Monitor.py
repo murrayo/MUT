@@ -27,72 +27,72 @@ import csv
 
 def generic_plot(df, column, Title, yLabel, saveAs, pres=False, yzero=True, TextString="", Hours=False):
 
-        colormapName = "Set1"
-        
-        plt.style.use('seaborn')
-        plt.figure(num=None, figsize=(10, 6), dpi=300)
-        sns.set_style("whitegrid")
-        palette = plt.get_cmap(colormapName)
-        color=palette(1)
-
-        plt.plot(df[column], color=color, alpha=0.7)
-        plt.title(Title, fontsize=14)
-        plt.ylabel(yLabel, fontsize=10)
-        plt.tick_params(labelsize=10)  
+    colormapName = "Set1"
     
-        ax = plt.gca()
-        ax.grid(which='major', axis='both', linestyle='--') 
+    plt.style.use('seaborn-whitegrid')
+    plt.figure(num=None, figsize=(10, 6), dpi=300)
+    palette = plt.get_cmap(colormapName)
+    color=palette(1)
+
+    plt.plot(df[column], color=color, alpha=0.7)
+    plt.title(Title, fontsize=14)
+    plt.ylabel(yLabel, fontsize=10)
+    plt.tick_params(labelsize=10)  
+
+    ax = plt.gca()
+    ax.grid(which='major', axis='both', linestyle='--') 
+    
+    if yzero:
+            ax.set_ylim(bottom=0)  # Always zero start                
+    if pres :
+        ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.2f}'))
+    else :
+        ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}')) 
+           
+    if Hours:
+        ax.xaxis.set_major_locator(mdates.HourLocator(interval = 4))
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%d/%m %H:%M'))
+    else :    
+        ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
         
-        if yzero:
-                ax.set_ylim(ymin=0)  # Always zero start                
-        if pres :
-            ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.2f}'))
-        else :
-            ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}')) 
-               
-        if Hours:
-            ax.xaxis.set_major_locator(mdates.HourLocator(interval = 4))
-            ax.xaxis.set_major_formatter(mdates.DateFormatter('%d/%m %H:%M'))
-        else :    
-            ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
-            
-        plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
-        plt.text(0.01,.95,TextString, ha='left', va='center', transform=ax.transAxes, fontsize=12)
-        plt.tight_layout()        
-        plt.savefig(saveAs, format='pdf')
-        plt.close()
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
+    plt.text(0.01,.95,TextString, ha='left', va='center', transform=ax.transAxes, fontsize=12)
+    plt.tight_layout()        
+    plt.savefig(saveAs, format='pdf')
+    plt.close()
 
 def generic_top_n(df_sort, TopN, df_master_ps, plot_what, Title, yLabel, saveAs, pres=False):
 
-        top_List = df_sort['pName'].head(TopN).tolist()
-        grpd = df_master_ps.groupby('pName') 
+    top_List = df_sort['pName'].head(TopN).tolist()
+    grpd = df_master_ps.groupby('pName') 
 
-        plt.style.use('seaborn')
-        plt.figure(num=None, figsize=(10, 6), dpi=300)
-        sns.set_style("whitegrid")
-        
-        current_palette_10 = sns.color_palette("Paired", TopN)
-        sns.set_palette(current_palette_10)
-             
-        for name, data in grpd:        
-            if name in top_List:        
-                plt.plot(data.Date.values, data.eval(plot_what).values, '-', label = name)
-        plt.title(Title, fontsize=14)
-        plt.ylabel(yLabel, fontsize=10)
-        plt.tick_params(labelsize=10) 
-        plt.legend(loc='upper left')      
-        ax = plt.gca()
-        ax.set_ylim(ymin=0)  # Always zero start
-        if pres :
-            ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.2f}'))
-        else :
-            ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))    
+    plt.style.use('seaborn-whitegrid')
+    plt.figure(num=None, figsize=(10, 6), dpi=300)
+    palette = plt.get_cmap(colormapName)
+    color=palette(1)
+    
+    current_palette_10 = sns.color_palette("Paired", TopN)
+    sns.set_palette(current_palette_10)
+         
+    for name, data in grpd:        
+        if name in top_List:        
+            plt.plot(data.Date.values, data.eval(plot_what).values, '-', label = name)
+    plt.title(Title, fontsize=14)
+    plt.ylabel(yLabel, fontsize=10)
+    plt.tick_params(labelsize=10) 
+    plt.legend(loc='upper left')      
+    ax = plt.gca()
+    ax.set_ylim(bottom=0)  # Always zero start
+    if pres :
+        ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.2f}'))
+    else :
+        ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))    
 
-        ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
-        plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
-        plt.tight_layout()
-        plt.savefig(saveAs, format='pdf')
-        plt.close()               
+    ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
+    plt.tight_layout()
+    plt.savefig(saveAs, format='pdf')
+    plt.close()               
 
 # Dont crowd the pie chart. To do; bucket 'Other' after 2pct
     
@@ -105,6 +105,8 @@ def make_autopct(values):
 
 def average_episode_size(DIRECTORY, MonitorAppFile, MonitorDatabaseFile, TRAKDOCS, INCLUDE):
 
+    colormapName = "Set1"
+    
     # Get the episode data 
     outputName = os.path.splitext(os.path.basename(MonitorDatabaseFile))[0]
     outputFile_pdf = DIRECTORY+"/all_out_pdf/"+outputName+"_Summary"  
@@ -177,8 +179,11 @@ def average_episode_size(DIRECTORY, MonitorAppFile, MonitorDatabaseFile, TRAKDOC
     RunDateEnd = df_result.tail(1).index.tolist()
     RunDateEnd = RunDateEnd[0].strftime('%d/%m/%Y')
 
-    plt.style.use('seaborn')
+    plt.style.use('seaborn-whitegrid')
     plt.figure(num=None, figsize=(10, 6), dpi=300)
+    palette = plt.get_cmap(colormapName)
+    color=palette(1)
+    
     plt.plot(df_result['AvgEpisodeSizeMB'])
     plt.title('Average Episode Size '+RunDateStart+' - '+RunDateEnd, fontsize=14)
     plt.tick_params(labelsize=10)
@@ -250,9 +255,8 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
     TopNDatabaseByGrowthStack = 6
     
     colormapName = "Set1"
-    #plt.style.use('seaborn')
+    #plt.style.use('seaborn-whitegrid')
     #plt.figure(num=None, figsize=(10, 6), dpi=300)
-    #sns.set_style("whitegrid")
     #palette = plt.get_cmap(colormapName)
     #color=palette(1)
     #plt.plot(df_master['CPU'], color=color, alpha=0.7)
@@ -370,8 +374,10 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
          
         # Example of multiple charts. To do; Make this a function to accept any number of items
         
-        plt.style.use('seaborn')
+        plt.style.use('seaborn-whitegrid')
         plt.figure(num=None, figsize=(10, 6), dpi=300)
+        palette = plt.get_cmap(colormapName)
+        color=palette(1)
         
         plt.plot(df_master_ep['EpisodeCountTotal'], label='Total Episodes Per Day')
         plt.plot(df_master_ep['OrderCountTotal'], label='Total Orders Per Day')
@@ -381,7 +387,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         plt.ylabel('Count', fontsize=10)
         plt.tick_params(labelsize=10)       
         ax = plt.gca()
-        ax.set_ylim(ymin=0)  # Always zero start
+        ax.set_ylim(bottom=0)  # Always zero start
         ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
         ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
         plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
@@ -389,13 +395,22 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         plt.savefig(outputFile_pdf+"_Ttl_Episodes_Orders.pdf", format='pdf')
         plt.close()        
 
+
+        plt.style.use('seaborn-whitegrid')
+        plt.figure(num=None, figsize=(10, 6), dpi=300)
+        palette = plt.get_cmap(colormapName)
+        color=palette(1)
+
         # What are the busiest days?
         df_master_ep["Day"] = df_master_ep.index.to_series().dt.weekday_name
         
         plt.title('Episodes by Day '+TITLEDATES, fontsize=14)
         plt.tick_params(labelsize=10)  
-                
+         
         count_plot = sns.swarmplot(x="Day", y="EpisodeCountTotal", data=df_master_ep)
+        count_plot.set(ylabel='Count', xlabel='')
+        count_plot.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
+
         fig = count_plot.get_figure()
         fig.savefig(outputFile_pdf+"_swarm_plot.pdf")        
            
@@ -459,8 +474,10 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         df_databases_by_growth.head(TopNDatabaseByGrowth).to_csv(outputFile_csv+"_top_"+str(TopNDatabaseByGrowth)+".csv", sep=',', index=False)
         
         # Bar chart - top N Total Growth
-        plt.style.use('seaborn')
+        plt.style.use('seaborn-whitegrid')
         plt.figure(num=None, figsize=(10, 6), dpi=300)
+        palette = plt.get_cmap(colormapName)
+        color=palette(1)
         index = np.arange(len(df_databases_by_growth['Database'].head(TopNDatabaseByGrowth)))
         
         plt.barh(df_databases_by_growth['Database'].head(TopNDatabaseByGrowth), df_databases_by_growth['Growth MB'].head(10))
@@ -481,8 +498,10 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         top_List = df_databases_by_growth['Database'].head(TopNDatabaseByGrowthStack).tolist()
         grpd = df_master_db.groupby('Name') 
 
-        plt.style.use('seaborn')
+        plt.style.use('seaborn-whitegrid')
         plt.figure(num=None, figsize=(10, 6), dpi=300)
+        palette = plt.get_cmap(colormapName)
+        color=palette(1)
             
         for name, data in grpd:        
             if name in top_List:        
@@ -493,7 +512,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         plt.tick_params(labelsize=10) 
         plt.legend(loc='upper left')      
         ax = plt.gca()
-        ax.set_ylim(ymin=0)  # Always zero start
+        ax.set_ylim(bottom=0)  # Always zero start
         ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
         ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
         plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
@@ -517,7 +536,8 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         
         df_sorted["Labels"] = np.where(df_sorted['DatabaseUsedMB']*100/Total_all_db > 2, df_sorted['Name'], '')
         
-        plt.style.use('seaborn')
+        plt.style.use('seaborn-whitegrid')
+
         current_palette_10 = sns.color_palette("Paired", 10)
         sns.set_palette(current_palette_10)
 
@@ -547,7 +567,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         
         df_sorted["Labels"] = np.where(df_sorted['DatabaseUsedMB']*100/Total_all_db > 2, df_sorted['Name'], '')
         
-        plt.style.use('seaborn')
+        plt.style.use('seaborn-whitegrid')
         plt.figure(num=None, figsize=(10, 6), dpi=300)
         pie_exp = tuple(0.1 if i < 2 else 0 for i in range(df_sorted['Name'].count())) # Pie explode 
         
@@ -621,10 +641,9 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
             all_keys.append(i)
             all_values.append(j)
             
-            
-        plt.style.use('seaborn')
+        plt.style.use('seaborn-whitegrid')
         plt.figure(num=None, figsize=(10, 6), dpi=300)
-        sns.set_style("whitegrid")
+ 
         palette = plt.get_cmap(colormapName)
         palette_cycle = sns.color_palette("Set1")
 
@@ -635,7 +654,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         plt.tick_params(labelsize=10)  
         ax = plt.gca()
         ax.grid(which='major', axis='both', linestyle='--') 
-        ax.set_ylim(ymin=0)  # Always zero start
+        ax.set_ylim(bottom=0)  # Always zero start
         ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
         ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
         plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
@@ -743,7 +762,8 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
                 
             # Lets see the highest growth globals - bar chart
         
-            plt.style.use('seaborn')
+
+            plt.style.use('seaborn-whitegrid')
             current_palette_10 = sns.color_palette("Paired", TopNDatabaseByGrowth)
             sns.set_palette(current_palette_10)
 
@@ -766,7 +786,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         
             grpd = df_master_gb.groupby('Full_Global') 
 
-            plt.style.use('seaborn')
+            plt.style.use('seaborn-whitegrid')
             current_palette_10 = sns.color_palette("Paired", TopNDatabaseByGrowth)
             sns.set_palette(current_palette_10)
 
@@ -781,7 +801,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
             plt.ylabel('GB', fontsize=10)
             plt.tick_params(labelsize=10)       
             ax = plt.gca()
-            ax.set_ylim(ymin=0)  # Always zero start
+            ax.set_ylim(bottom=0)  # Always zero start
             ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
             ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
             plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
@@ -815,7 +835,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
     
             df_sorted["Labels"] = np.where(df_sorted['End Size']*100/Total_all_gb > 2, df_sorted['Full_Global'], '')
     
-            plt.style.use('seaborn')
+            plt.style.use('seaborn-whitegrid')
             current_palette_10 = sns.color_palette("Paired", 12)
             sns.set_palette(current_palette_10)
             plt.figure(num=None, figsize=(10, 6), dpi=300)
@@ -920,7 +940,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         # get top by sum globals and display charts
         top_List = df_ps_by_SumPGlobals['pName'].head(TopNDatabaseByGrowth).tolist()
  
-        plt.style.use('seaborn')
+        plt.style.use('seaborn-whitegrid')
         plt.figure(figsize=(10, 6), dpi=300)
                             
         x=0
@@ -932,7 +952,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
             ax1.set_title('Average Globals and Time by day '+TITLEDATES+"\n"+name, fontsize=14)
             ax1.set_ylabel('Average Globals', fontsize=10, color=color)
             ax1.tick_params(labelsize=10)  
-            ax1.set_ylim(ymin=0)  # Always zero start                
+            ax1.set_ylim(bottom=0)  # Always zero start                
             ax1.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))    
             ax1.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
             
@@ -941,7 +961,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
             line2 = ax2.plot(df_ps_top_ind["AvgPTime"], color=color)               
             ax2.set_ylabel('Average Time', fontsize=10, color=color)
             ax2.tick_params(labelsize=10)  
-            ax2.set_ylim(ymin=0)  # Always zero start                
+            ax2.set_ylim(bottom=0)  # Always zero start                
             ax2.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.2f}'))
             ax2.grid(None)    
             # TextString = ""    
