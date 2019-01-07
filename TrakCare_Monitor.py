@@ -63,6 +63,8 @@ def generic_plot(df, column, Title, yLabel, saveAs, pres=False, yzero=True, Text
 
 def generic_top_n(df_sort, TopN, df_master_ps, plot_what, Title, yLabel, saveAs, pres=False):
 
+    colormapName = "Set1"
+
     top_List = df_sort['pName'].head(TopN).tolist()
     grpd = df_master_ps.groupby('pName') 
 
@@ -947,6 +949,8 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         for name in top_List :
             df_ps_top_ind = df_master_ps[df_master_ps.pName == name ]            
             fig, ax1 = plt.subplots()
+            plt.gcf().set_size_inches(10, 6)
+            plt.gcf().set_dpi(300)
             color="g"
             line1 = ax1.plot(df_ps_top_ind["AvgPGlobals"], color=color)
             ax1.set_title('Average Globals and Time by day '+TITLEDATES+"\n"+name, fontsize=14)
