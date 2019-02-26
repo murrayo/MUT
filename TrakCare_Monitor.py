@@ -10,6 +10,7 @@
 import os
 import pandas as pd
 import matplotlib as mpl
+mpl.use('TkAgg')
 import seaborn as sns
 import string
 
@@ -58,7 +59,7 @@ def generic_plot(df, column, Title, yLabel, saveAs, pres=False, yzero=True, Text
     plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
     plt.text(0.01,.95,TextString, ha='left', va='center', transform=ax.transAxes, fontsize=12)
     plt.tight_layout()        
-    plt.savefig(saveAs, format='pdf')
+    plt.savefig(saveAs, format='png')
     plt.close()
 
 def generic_top_n(df_sort, TopN, df_master_ps, plot_what, Title, yLabel, saveAs, pres=False):
@@ -93,7 +94,7 @@ def generic_top_n(df_sort, TopN, df_master_ps, plot_what, Title, yLabel, saveAs,
     ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
     plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
     plt.tight_layout()
-    plt.savefig(saveAs, format='pdf')
+    plt.savefig(saveAs, format='png')
     plt.close()               
 
 # Dont crowd the pie chart. To do; bucket 'Other' after 2pct
@@ -111,7 +112,7 @@ def average_episode_size(DIRECTORY, MonitorAppFile, MonitorDatabaseFile, TRAKDOC
     
     # Get the episode data 
     outputName = os.path.splitext(os.path.basename(MonitorDatabaseFile))[0]
-    outputFile_pdf = DIRECTORY+"/all_out_pdf/"+outputName+"_Summary"  
+    outputFile_png = DIRECTORY+"/all_out_png/"+outputName+"_Summary"  
     outputFile_csv = DIRECTORY+"/all_out_csv/"+outputName+"_Summary"       
     print("Episode size: %s" % outputName)
 
@@ -140,18 +141,18 @@ def average_episode_size(DIRECTORY, MonitorAppFile, MonitorDatabaseFile, TRAKDOC
     if TRAKDOCS == ["all"] :
         includew = ' with '
         df_master_db_dm = df_master_db
-        outputFile_pdf_x = outputFile_pdf+"_All_EP_Size.pdf" 
+        outputFile_png_x = outputFile_png+"_All_EP_Size.png" 
     else:        
         # INCLUDE only the document database ? = True 
         if INCLUDE:
             includew = ' only '
             df_master_db_dm = df_master_db[df_master_db['Name'].isin(TRAKDOCS)] 
-            outputFile_pdf_x = outputFile_pdf+"_"+'_'.join(TRAKDOCS)+"_EP_Size.pdf"
+            outputFile_png_x = outputFile_png+"_"+'_'.join(TRAKDOCS)+"_EP_Size.png"
         # All databases except document database    
         else:
             includew = ' without '
             df_master_db_dm = df_master_db[~df_master_db['Name'].isin(TRAKDOCS)] 
-            outputFile_pdf_x = outputFile_pdf+"_Not_"+'_'.join(TRAKDOCS)+"_EP_Size.pdf" 
+            outputFile_png_x = outputFile_png+"_Not_"+'_'.join(TRAKDOCS)+"_EP_Size.png" 
                 
     # Group databases by date, add column for growth per day, remove date index for merging
     df_db_by_date = df_master_db_dm.groupby('Date').sum()
@@ -197,7 +198,7 @@ def average_episode_size(DIRECTORY, MonitorAppFile, MonitorDatabaseFile, TRAKDOC
     plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
     plt.text(0.01,.95,TextString, ha='left', va='center', transform=ax.transAxes, fontsize=12)
     plt.tight_layout() 
-    plt.savefig(outputFile_pdf_x, format='pdf')
+    plt.savefig(outputFile_png_x, format='png')
     #plt.show()
     plt.close()        
     
@@ -225,9 +226,9 @@ def average_episode_size(DIRECTORY, MonitorAppFile, MonitorDatabaseFile, TRAKDOC
             f.write('Average growth/episode{0}{1} databases: {2:,.0f} KB (per episode size)'.format(includew, ', '.join(TRAKDOCS), AverageEpisodeSize*1024)+"\n")
             
             TextString = 'Database size at end : '+'{v:,.0f}'.format(v=df_result.iloc[-1]['DatabaseUsedMB']/1024)+" GB\n"
-            generic_plot(df_result, 'DatabaseUsedMB', 'Total Database Size (MB)  '+RunDateStart+' to '+RunDateEnd, 'MB', outputFile_pdf+"_All_Total.pdf", False, True, TextString )
+            generic_plot(df_result, 'DatabaseUsedMB', 'Total Database Size (MB)  '+RunDateStart+' to '+RunDateEnd, 'MB', outputFile_png+"_All_Total.png", False, True, TextString )
             TextString = 'Average database growth/day : '+'{v:,.3f}'.format(v=DatabaseGrowthTotal/1024/df_result['DatabaseGrowthMB'].count())+' GB'
-            generic_plot(df_result, 'DatabaseGrowthMB', 'Database Growth per Day (MB)  '+RunDateStart+' to '+RunDateEnd, 'MB', outputFile_pdf+"_All_Growth.pdf", False, False, TextString  )
+            generic_plot(df_result, 'DatabaseGrowthMB', 'Database Growth per Day (MB)  '+RunDateStart+' to '+RunDateEnd, 'MB', outputFile_png+"_All_Growth.png", False, False, TextString  )
     else:
         with open( DIRECTORY+"/all_"+outputName+'_Basic_Stats.txt', 'a') as f:
             f.write('\nTotal database growth{0}{1}: {2:,.2f}'.format(includew, ', '.join(TRAKDOCS), DatabaseGrowthTotal/1024)+" GB\n")
@@ -235,19 +236,19 @@ def average_episode_size(DIRECTORY, MonitorAppFile, MonitorDatabaseFile, TRAKDOC
             
             ChartTitle = 'Total Database Size (MB)'+includew+', '.join(TRAKDOCS)+' '+RunDateStart+' to '+RunDateEnd
             if INCLUDE:
-                outputFile_pdf_y = outputFile_pdf+'_'+'_'.join(TRAKDOCS)+"_Total.pdf"
+                outputFile_png_y = outputFile_png+'_'+'_'.join(TRAKDOCS)+"_Total.png"
             else:
-                outputFile_pdf_y = outputFile_pdf+'_Not_'+'_'.join(TRAKDOCS)+"_Total.pdf"
+                outputFile_png_y = outputFile_png+'_Not_'+'_'.join(TRAKDOCS)+"_Total.png"
             TextString = 'Database size at end : '+'{v:,.0f}'.format(v=df_result.iloc[-1]['DatabaseUsedMB']/1024)+" GB"    
-            generic_plot(df_result, 'DatabaseUsedMB', ChartTitle, "MB", outputFile_pdf_y, False, True, TextString )
+            generic_plot(df_result, 'DatabaseUsedMB', ChartTitle, "MB", outputFile_png_y, False, True, TextString )
             
             ChartTitle = 'Database Growth per Day'+includew+', '.join(TRAKDOCS)+' '+RunDateStart+' to '+RunDateEnd
             if INCLUDE:
-                outputFile_pdf_y = outputFile_pdf+'_'+'_'.join(TRAKDOCS)+"_Growth.pdf"
+                outputFile_png_y = outputFile_png+'_'+'_'.join(TRAKDOCS)+"_Growth.png"
             else:
-                outputFile_pdf_y = outputFile_pdf+'_Not_'+'_'.join(TRAKDOCS)+"_Growth.pdf" 
+                outputFile_png_y = outputFile_png+'_Not_'+'_'.join(TRAKDOCS)+"_Growth.png" 
             TextString = 'Average database growth/day : '+'{v:,.3f}'.format(v=DatabaseGrowthTotal/1024/df_result['DatabaseGrowthMB'].count())+' GB'              
-            generic_plot(df_result, 'DatabaseGrowthMB', ChartTitle, "MB", outputFile_pdf_y, False, False, TextString  )
+            generic_plot(df_result, 'DatabaseGrowthMB', ChartTitle, "MB", outputFile_png_y, False, False, TextString  )
         
 def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
 
@@ -272,9 +273,9 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
     MonitorJournalsName=glob.glob(DIRECTORY+'/*MonitorJournals.txt')     
     MonitorPageSummaryName=glob.glob(DIRECTORY+'/*MonitorPageSummary.txt')   
     
-    # Create directories for generated csv and pdf files
-    if not os.path.exists(DIRECTORY+"/all_out_pdf"):
-        os.mkdir(DIRECTORY+"/all_out_pdf")
+    # Create directories for generated csv and png files
+    if not os.path.exists(DIRECTORY+"/all_out_png"):
+        os.mkdir(DIRECTORY+"/all_out_png")
     if not os.path.exists(DIRECTORY+"/all_out_csv"):
         os.mkdir(DIRECTORY+"/all_out_csv")
     if not os.path.exists(DIRECTORY+"/all_database"):
@@ -285,7 +286,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
     
     for filename in MonitorJournalsName :
         outputName = os.path.splitext(os.path.basename(filename))[0]
-        outputFile_pdf = DIRECTORY+"/all_out_pdf/"+outputName  
+        outputFile_png = DIRECTORY+"/all_out_png/"+outputName  
         outputFile_csv = DIRECTORY+"/all_out_csv/"+outputName     
         print("Journals: %s" % outputName)
     
@@ -324,7 +325,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
                 
         count_plot = sns.swarmplot(x="Create Day", y="Create Hour", data=df_last_week, hue="Reason", dodge=True)
         fig = count_plot.get_figure()
-        fig.savefig(outputFile_pdf+"_swarm_plot.pdf") 
+        fig.savefig(outputFile_png+"_swarm_plot.png") 
         fig.clf()
 
         # Fun over, just usual chart.... 
@@ -341,7 +342,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
     
         TextString = 'Average Journals/day : '+'{v:,.0f}'.format(v=df_day['Journal Sum GB'].mean())+' GB' 
         TextString = TextString+', Peak Journals/day : '+'{v:,.0f}'.format(v=df_day['Journal Sum GB'].max())+' GB'
-        generic_plot(df_day, 'Journal Sum GB', 'Journals Per Day (GB)  '+TITLEDATES, 'GB per Day', outputFile_pdf+"_per_day.pdf", False, True, TextString )
+        generic_plot(df_day, 'Journal Sum GB', 'Journals Per Day (GB)  '+TITLEDATES, 'GB per Day', outputFile_png+"_per_day.png", False, True, TextString )
         
         df_day.to_csv(outputFile_csv+"_by_Day.csv", sep=',')
 
@@ -352,7 +353,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
     
     for filename in MonitorAppName :
         outputName = os.path.splitext(os.path.basename(filename))[0]
-        outputFile_pdf = DIRECTORY+"/all_out_pdf/"+outputName 
+        outputFile_png = DIRECTORY+"/all_out_png/"+outputName 
         outputFile_csv = DIRECTORY+"/all_out_csv/"+outputName           
         print("Episodes: %s" % outputName)
     
@@ -371,8 +372,8 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         TextString = TextString+', Peak Episodes/day : '+'{v:,.0f}'.format(v=df_master_ep['EpisodeCountTotal'].max())  
         TextString = TextString+', Est Episodes/year : '+'{v:,.0f}'.format(v=df_master_ep['EpisodeCountTotal'].mean()*365) 
         
-        generic_plot(df_master_ep, 'EpisodeCountTotal', 'Total Episodes Per Day  '+TITLEDATES, 'Episodes per Day', outputFile_pdf+"_Ttl_Episodes.pdf", False, True, TextString )
-        generic_plot(df_master_ep, 'OrderCountTotal', 'Total Orders Per Day  '+TITLEDATES, 'Orders per Day', outputFile_pdf+"_Ttl_Orders.pdf", False, True )
+        generic_plot(df_master_ep, 'EpisodeCountTotal', 'Total Episodes Per Day  '+TITLEDATES, 'Episodes per Day', outputFile_png+"_Ttl_Episodes.png", False, True, TextString )
+        generic_plot(df_master_ep, 'OrderCountTotal', 'Total Orders Per Day  '+TITLEDATES, 'Orders per Day', outputFile_png+"_Ttl_Orders.png", False, True )
          
         # Example of multiple charts. To do; Make this a function to accept any number of items
         
@@ -394,7 +395,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
         plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
         plt.tight_layout()
-        plt.savefig(outputFile_pdf+"_Ttl_Episodes_Orders.pdf", format='pdf')
+        plt.savefig(outputFile_png+"_Ttl_Episodes_Orders.png", format='png')
         plt.close()        
 
 
@@ -414,7 +415,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         count_plot.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
 
         fig = count_plot.get_figure()
-        fig.savefig(outputFile_pdf+"_swarm_plot.pdf")        
+        fig.savefig(outputFile_png+"_swarm_plot.png")        
            
     # Databases  -------------------------------------------------------------------------
     # Total by day and output full list, by day list, top n growth and chart top n growth
@@ -422,7 +423,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
     for filename in MonitorDatabaseName:
     
         outputName = os.path.splitext(os.path.basename(filename))[0]
-        outputFile_pdf = DIRECTORY+"/all_out_pdf/"+outputName+"_Summary"  
+        outputFile_png = DIRECTORY+"/all_out_png/"+outputName+"_Summary"  
         outputFile_csv = DIRECTORY+"/all_out_csv/"+outputName+"_Summary"             
         print("Databases: %s" % outputName)
     
@@ -441,14 +442,14 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
 
         # Data growth 
         TextString = 'Database size used at end : '+'{v:,.0f}'.format(v=df_db_by_date.iloc[-1]['DatabaseUsedMB']/1024)+" GB (includes CACHETEMP)\n"
-        generic_plot(df_db_by_date, 'DatabaseUsedMB', 'Total Database Used  '+TITLEDATES, '(MB)', outputFile_pdf+"_Ttl_Database_Used.pdf", False, True, TextString )
+        generic_plot(df_db_by_date, 'DatabaseUsedMB', 'Total Database Used  '+TITLEDATES, '(MB)', outputFile_png+"_Ttl_Database_Used.png", False, True, TextString )
         
         # Actual usage on disk
         TextString = 'Database size on disk (inc Freespace) at end : '+'{v:,.0f}'.format(v=df_db_by_date.iloc[-1]['SizeinMB']/1024)+" GB (includes CACHETEMP)\n"
-        generic_plot(df_db_by_date, 'SizeinMB', 'Total Database Size on Disk  '+TITLEDATES, '(MB)', outputFile_pdf+"_Ttl_Database_Size_On_Disk.pdf", False, True, TextString )
+        generic_plot(df_db_by_date, 'SizeinMB', 'Total Database Size on Disk  '+TITLEDATES, '(MB)', outputFile_png+"_Ttl_Database_Size_On_Disk.png", False, True, TextString )
         
         TextString = 'Database free at end : '+'{v:,.0f}'.format(v=df_db_by_date.iloc[-1]['FreeSpace']/1024)+" GB (includes CACHETEMP)\n"
-        generic_plot(df_db_by_date, 'FreeSpace', 'Total Database Freespace on Disk  '+TITLEDATES, '(MB)', outputFile_pdf+"_Ttl_Database_Free.pdf", False, True, TextString )
+        generic_plot(df_db_by_date, 'FreeSpace', 'Total Database Freespace on Disk  '+TITLEDATES, '(MB)', outputFile_png+"_Ttl_Database_Free.png", False, True, TextString )
         
         # What are the high growth databases in this period? 
         # Get database sizes, dont key by date as we will use this field
@@ -491,7 +492,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         ax = plt.gca()
         ax.xaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
         plt.tight_layout()
-        plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowth)+"_Bar.pdf", format='pdf')
+        plt.savefig(outputFile_png+"_Top_"+str(TopNDatabaseByGrowth)+"_Bar.png", format='png')
         plt.close()     
               
         # Growth of top n databases over time (not stacked)
@@ -519,7 +520,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
         plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
         plt.tight_layout()
-        plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowthStack)+"_Growth_Time.pdf", format='pdf')
+        plt.savefig(outputFile_png+"_Top_"+str(TopNDatabaseByGrowthStack)+"_Growth_Time.png", format='png')
         plt.close()               
 
         
@@ -551,7 +552,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         
         plt.axis('equal')
         plt.tight_layout()
-        plt.savefig(outputFile_pdf+"_Total_DB_Size_Pie_Start.pdf")
+        plt.savefig(outputFile_png+"_Total_DB_Size_Pie_Start.png")
         plt.close()
 
         # Last day of sample period
@@ -578,7 +579,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         
         plt.axis('equal')
         plt.tight_layout()
-        plt.savefig(outputFile_pdf+"_Total_DB_Size_Pie_End.pdf")
+        plt.savefig(outputFile_png+"_Total_DB_Size_Pie_End.png")
         plt.close()
 
         # Stacked Chart is a good way to look at Top N- this was more painful than I expected, but hey, its to hot to go outside.
@@ -663,7 +664,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         plt.tight_layout()
         plt.legend(loc='upper left')    
     
-        plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowthStack)+"_Growth_Time_Stack.pdf", format='pdf')
+        plt.savefig(outputFile_png+"_Top_"+str(TopNDatabaseByGrowthStack)+"_Growth_Time_Stack.png", format='png')
         plt.close()
         
         df_top_List.to_csv(outputFile_csv+"_top_list.csv", sep=',', index=False)
@@ -698,7 +699,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
                 os.mkdir(DIRECTORY+"/all_globals") 
                 
             outputName = os.path.splitext(os.path.basename(filename))[0]
-            outputFile_pdf = DIRECTORY+"/all_out_pdf/"+outputName+"_Summary"  
+            outputFile_png = DIRECTORY+"/all_out_png/"+outputName+"_Summary"  
             outputFile_csv = DIRECTORY+"/all_out_csv/"+outputName+"_Summary"                                  
             
             print("Globals: %s" % outputName)
@@ -780,7 +781,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
             ax = plt.gca()
             ax.xaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
             plt.tight_layout()
-            plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowth)+".pdf", format='pdf')
+            plt.savefig(outputFile_png+"_Top_"+str(TopNDatabaseByGrowth)+".png", format='png')
             plt.close()     
             
             # Growth of top n globals - Not Stacked
@@ -808,7 +809,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
             ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.WeekdayLocator(byweekday=MO)))
             plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
             plt.tight_layout()
-            plt.savefig(outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowth)+"_Growth.pdf", format='pdf')
+            plt.savefig(outputFile_png+"_Top_"+str(TopNDatabaseByGrowth)+"_Growth.png", format='png')
             plt.close()        
             
             # Print the full history of the top N globals
@@ -823,7 +824,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
                 df_gb_top_ind = df_master_gb[df_master_gb.Full_Global == full_name ]            
                 
                 TextString = 'Global size on disk at end : '+'{v:,.0f}'.format(v=df_gb_top_ind.iloc[-1]['SizeAllocatedGB'])+" GB "+full_name
-                generic_plot(df_gb_top_ind, 'SizeAllocatedGB', 'Total Global Size on Disk _'+TITLEDATES, '(GB)', outputFile_pdf+"_"+str(x)+"_Ttl_Global_Size_On_Disk"+full_name+".pdf", False, True, TextString )
+                generic_plot(df_gb_top_ind, 'SizeAllocatedGB', 'Total Global Size on Disk _'+TITLEDATES, '(GB)', outputFile_png+"_"+str(x)+"_Ttl_Global_Size_On_Disk"+full_name+".png", False, True, TextString )
                 x = x+1              
 
             # PIE chart of total global size
@@ -849,7 +850,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
     
             plt.axis('equal')
             plt.tight_layout()
-            plt.savefig(outputFile_pdf+"_Total_global_Size_Pie_End.pdf")
+            plt.savefig(outputFile_png+"_Total_global_Size_Pie_End.png")
             plt.close()
 
     # Page Summary
@@ -860,7 +861,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
             os.mkdir(DIRECTORY+"/all_pages") 
             
         outputName = os.path.splitext(os.path.basename(filename))[0]
-        outputFile_pdf = DIRECTORY+"/all_out_pdf/"+outputName+"_Summary"  
+        outputFile_png = DIRECTORY+"/all_out_png/"+outputName+"_Summary"  
         outputFile_csv = DIRECTORY+"/all_out_csv/"+outputName+"_Summary"                                  
         
         print("Page Summary: %s" % outputName)
@@ -908,32 +909,32 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         df_master_ps['Date'] = pd.to_datetime(df_master_ps['Date'])  
         
         generic_top_n(df_ps_by_SumPGlobals, TopNDatabaseByGrowthStack, df_master_ps, "SumPGlobals", 'High Sum Globals (Not Stacked)  '+TITLEDATES, \
-                                                                    'Sum Globals', outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowthStack)+"_Sum_Globals.pdf", pres=False)
+                                                                    'Sum Globals', outputFile_png+"_Top_"+str(TopNDatabaseByGrowthStack)+"_Sum_Globals.png", pres=False)
 
         generic_top_n(df_ps_by_AvgPGlobals, TopNDatabaseByGrowthStack, df_master_ps, "AvgPGlobals", 'High Average Globals (Not Stacked)  '+TITLEDATES, \
-                                                                    'Average Globals', outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowthStack)+"_Average_Globals.pdf", pres=False)
+                                                                    'Average Globals', outputFile_png+"_Top_"+str(TopNDatabaseByGrowthStack)+"_Average_Globals.png", pres=False)
 
         generic_top_n(df_ps_by_SumPTime, TopNDatabaseByGrowthStack, df_master_ps, "SumPTime", 'High Sum Time (Not Stacked)  '+TITLEDATES, \
-                                                                    'Sum Time', outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowthStack)+"_SumPTime.pdf", pres=False)
+                                                                    'Sum Time', outputFile_png+"_Top_"+str(TopNDatabaseByGrowthStack)+"_SumPTime.png", pres=False)
 
         generic_top_n(df_ps_by_TotalHits, TopNDatabaseByGrowthStack, df_master_ps, "TotalHits", 'High Hits (Not Stacked)  '+TITLEDATES, \
-                                                                    'Number of Hits', outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowthStack)+"_TotalHits.pdf", pres=False)
+                                                                    'Number of Hits', outputFile_png+"_Top_"+str(TopNDatabaseByGrowthStack)+"_TotalHits.png", pres=False)
 
         # Note top 10
         generic_top_n(df_ps_by_TotalHits, TopNDatabaseByGrowth, df_master_ps, "SumPGlobals", 'Sum Globals for High Hits (Not Stacked)  '+TITLEDATES, \
-                                                                    'Sum Globals', outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowth)+"_TotalHits_SumGlobals.pdf", pres=False)
+                                                                    'Sum Globals', outputFile_png+"_Top_"+str(TopNDatabaseByGrowth)+"_TotalHits_SumGlobals.png", pres=False)
 
         generic_top_n(df_ps_by_MaxPGlobals, TopNDatabaseByGrowth, df_master_ps, "AvgPGlobals", 'High Maximum Average Globals (Not Stacked)  '+TITLEDATES, \
-                                                                    'Average Globals', outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowth)+"_MaxPGlobals.pdf", pres=False)
+                                                                    'Average Globals', outputFile_png+"_Top_"+str(TopNDatabaseByGrowth)+"_MaxPGlobals.png", pres=False)
 
         generic_top_n(df_ps_by_TotalHits, TopNDatabaseByGrowth, df_master_ps, "AvgPGlobals", 'Average Globals for High Hits (Not Stacked)  '+TITLEDATES, \
-                                                                    'Average Globals', outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowth)+"_TotalHits_AvgPGlobals.pdf", pres=False)
+                                                                    'Average Globals', outputFile_png+"_Top_"+str(TopNDatabaseByGrowth)+"_TotalHits_AvgPGlobals.png", pres=False)
 
         generic_top_n(df_ps_by_TotalHits, TopNDatabaseByGrowth, df_master_ps, "SumPTime", 'Sum Time for High Hits (Not Stacked)  '+TITLEDATES, \
-                                                                    'Sum Time', outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowth)+"_TotalHits_SumPTime.pdf", pres=False)
+                                                                    'Sum Time', outputFile_png+"_Top_"+str(TopNDatabaseByGrowth)+"_TotalHits_SumPTime.png", pres=False)
 
         generic_top_n(df_ps_by_SumPGlobals, TopNDatabaseByGrowth, df_master_ps, "AvgPGlobals", 'Average Globals for High Sum Globals (Not Stacked)  '+TITLEDATES, \
-                                                                    'Average Globals', outputFile_pdf+"_Top_"+str(TopNDatabaseByGrowth)+"_SumPGlobals_AvgPGlobals.pdf", pres=False)
+                                                                    'Average Globals', outputFile_png+"_Top_"+str(TopNDatabaseByGrowth)+"_SumPGlobals_AvgPGlobals.png", pres=False)
 
 
         # Set date index for individual plots
@@ -978,7 +979,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
 
             plt.setp(ax1.get_xticklabels(), rotation=45, ha="right")
             plt.tight_layout()        
-            plt.savefig(outputFile_pdf+"_"+str(x)+"_"+name+"_Globals_Time.pdf", format='pdf')
+            plt.savefig(outputFile_png+"_"+str(x)+"_"+name+"_Globals_Time.png", format='png')
             plt.close(fig)
             x = x+1              
 
