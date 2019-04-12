@@ -65,7 +65,8 @@ do	echo "File: ${f}"
 	if [[ "$Windows" != "" ]]; then   
 	    yape -c --mgstat --perfmon --prefix "${fileName}_" "${Filename}"
 	else
-	    yape -c --mgstat --vmstat --iostat --prefix "${fileName}_" --plotDisks "${intreasting_disks}" ${Filename}
+	    #yape -c --mgstat --vmstat --iostat --prefix "${fileName}_" --plotDisks "${intreasting_disks}" ${Filename}
+	    yape -c --mgstat --vmstat --prefix "${fileName}_"  ${Filename}
 	fi    
 	
 	cd "${CurrentFolder}"
