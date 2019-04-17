@@ -41,7 +41,7 @@ do	case "$o" in
 	esac
 done
 
-ServerList = ""
+ServerList=""
 
 # Where are we now folder
 CurrentFolder=`pwd`
