@@ -253,7 +253,7 @@ def average_episode_size(DIRECTORY, MonitorAppFile, MonitorDatabaseFile, TRAKDOC
 def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
 
     # Top N values. To do; make parameters
-    TopNDatabaseByGrowth    = 10
+    TopNDatabaseByGrowth    = 15
     TopNDatabaseByGrowthPie = 5
     TopNDatabaseByGrowthStack = 6
     
@@ -483,7 +483,7 @@ def mainline(DIRECTORY, TRAKDOCS, Do_Globals):
         color=palette(1)
         index = np.arange(len(df_databases_by_growth['Database'].head(TopNDatabaseByGrowth)))
         
-        plt.barh(df_databases_by_growth['Database'].head(TopNDatabaseByGrowth), df_databases_by_growth['Growth MB'].head(10))
+        plt.barh(df_databases_by_growth['Database'].head(TopNDatabaseByGrowth), df_databases_by_growth['Growth MB'].head(TopNDatabaseByGrowth))
 
         plt.title('Top '+str(TopNDatabaseByGrowth)+' - Database Growth  '+TITLEDATES, fontsize=14)
         plt.xlabel('Growth over period (MB)', fontsize=10)
