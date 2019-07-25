@@ -33,9 +33,10 @@ Many of the tools in this section are built to further process csv files output 
 
 ### Pretty pButtons Charts
 
-The script `pretty_pButtons.py` uses the sqlite database that can be created using yape to create charts that can combine metrics for *Red Hat* (RHEL): vmstat iostat mgstat.
-For example, this is handy if you need to output charts for performance reports.
-There is also an option to output merged vmstat iostat and mgstat as a csv file for you to work within other ways.
+The script `pretty_pButtons.py` uses the sqlite database created using yape to make charts that can combine metrics for **Red Hat** (RHEL): vmstat, iostat and mgstat.
+For example, this is handy if you need to output charts for performance reports. This is a preview, working towards an interactive solution.
+
+There is also an option to output merged vmstat, iostat and mgstat as a csv file for you to work within other ways.
 
 Formatting and chart creation is driven from two yml files, I have included samples;
 `pretty_pButtons_input.yml` - instance details such as name and key disks eg: /dev/sde is sde. Also formatting details similar to yape.
@@ -45,6 +46,7 @@ The workflow is;
 
 0. Edit `pretty_pButtons_input.yml` and  `pretty_pButtons_chart.yml`. 
 Maybe run yape first to see what it is you want to look at at or deep dive in to.
+You will need the disk /dev names for Database, Primary and Alternate Journal, WIJ, and Caché/IRIS disk. The can all be the same.
 
 1. Create sqlite file using yape;
 `yape --filedb myfile.sqlite3 pButtonsHTMLfilename.html`
@@ -52,7 +54,7 @@ Maybe run yape first to see what it is you want to look at at or deep dive in to
 2. Here is an example:
 `pretty_pButtons.py -f myfile.sqlite3 -s 10:00 -e 11:00 -p pretty_pButtons_input.yml -i -m -c pretty_pButtons_chart.yml -o ./pretty
 
-_*There is very little error checking in the script*_
+_**There is very little error checking in the script**_
 
 ## Build docker image to run Python scripts
 
