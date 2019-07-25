@@ -39,20 +39,28 @@ For example, this is handy if you need to output charts for performance reports.
 There is also an option to output merged vmstat, iostat and mgstat as a csv file for you to work within other ways.
 
 Formatting and chart creation is driven from two yml files, I have included samples;
+
 `pretty_pButtons_input.yml` - instance details such as name and key disks eg: /dev/sde is sde. Also formatting details similar to yape.
+
 `pretty_pButtons_chart.yml` - Attributes of charts to produce.
 
 The workflow is;
 
 0. Edit `pretty_pButtons_input.yml` and  `pretty_pButtons_chart.yml`. 
-Maybe run yape first to see what it is you want to look at at or deep dive in to.
-You will need the disk /dev names for Database, Primary and Alternate Journal, WIJ, and Caché/IRIS disk. The can all be the same.
+
+Maybe run yape first with default plots to see what it is you want to look at at or deep dive in to.
+
+You will need the disk /dev names for Database, Primary and Alternate Journal, WIJ, and Caché/IRIS disk. They can all be the same.
+
+`yape --mgstat --vmstat --iostat pButtonsHTMLfilename.html`
 
 1. Create sqlite file using yape;
+
 `yape --filedb myfile.sqlite3 pButtonsHTMLfilename.html`
 
 2. Here is an example:
-`pretty_pButtons.py -f myfile.sqlite3 -s 10:00 -e 11:00 -p pretty_pButtons_input.yml -i -m -c pretty_pButtons_chart.yml -o ./pretty
+
+`pretty_pButtons.py -f myfile.sqlite3 -s 10:00 -e 11:00 -p pretty_pButtons_input.yml -i -m -c pretty_pButtons_chart.yml -o ./pretty`
 
 _**There is very little error checking in the script**_
 
