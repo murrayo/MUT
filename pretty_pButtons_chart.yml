@@ -1,0 +1,58 @@
+DB Jnl and WIJ Writes and DB_Reads:  
+    Title: "Database, Journal and WIJ Writes, Database Reads "
+    columns_to_show:
+        column1: {"Text": "Write IOPS Database", "Name": "w/s_db", "axis": "left", }
+        column2: {"Text": "Write IOPS Journal", "Name": "w/s_pri", "axis": "left"}   
+        column3: {"Text": "Write IOPS WIJ", "Name": "w/s_wij", "axis": "left"}
+        column4: {"Text": "Read IOPS Database", "Name": "r/s_db", "axis": "right"}
+    zoom: True
+    y_label_l: "Write IOPS"
+    y_label_r: "Read IOPS"
+    y_max_l: 0
+    y_max_r: 0
+    
+    
+Glorefs and vmstat:  
+    Title: "Glorefs and vmstat"
+    columns_to_show:
+        column1: {"Text": "Glorefs", "Name": "Glorefs_mg", "axis": "left"}
+        column2: {"Text": "Total CPU", "Name": "Total CPU_vm", "axis": "right"}   
+    zoom: False
+    y_label_l: "Global references/sec"
+    y_label_r: "Total CPU utilisation %"  
+    y_max_l: 0
+    y_max_r: 100    
+    
+vmstat and read queue:  
+    Title: "vmstat and read queue"
+    columns_to_show:
+        column1: {"Text": "Read queue", "Name": "r_vm", "axis": "left"}
+        column2: {"Text": "Total CPU", "Name": "Total CPU_vm", "axis": "right"}   
+    zoom: False
+    y_label_l: "read queue"
+    y_label_r: "Total CPU utilisation %"
+    y_max_l: 0
+    y_max_r: 100    
+    
+vmstat CPU:  
+    Title: "CPU Utilisation"
+    columns_to_show:
+        column1: {"Text": "Total CPU", "Name": "Total CPU_vm", "axis": "left"}   
+    zoom: False
+    y_label_l: "Total CPU utilisation %"
+    y_label_r: 
+    y_max_l: 100
+    y_max_r: 0    
+         
+    
+Glorefs and Database Reads:  
+    Title: "Glorefs and Database Reads"
+    columns_to_show:
+        column1: {"Text": "Glorefs", "Name": "Glorefs_mg", "axis": "left"}
+        column2: {"Text": "Read IOPS Database", "Name": "r/s_db", "axis": "right"}  
+    zoom: True
+    y_label_l: "Global references/sec"
+    y_label_r: "Database reads/sec" 
+    y_max_l: 0
+    y_max_r: 0    
+    

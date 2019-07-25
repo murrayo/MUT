@@ -1,0 +1,17 @@
+Site Name: "- Customer Name"
+Disk List:
+    Database: "sdd"
+    Primary Journal: "sdj1"
+    Alternate Journal: "sdk1"
+    WIJ: "sdb1"
+    IRIS: "dm-7"
+Colormap Name: "Set1"
+DPI: 300
+WIDTH: 16
+HEIGHT: 6
+StyleL: "-"
+StyleR: "-"
+Linewidth: 3
+Markersize: 3
+MEDIAN: False
+Moving Average: 60
