@@ -9,7 +9,7 @@ As the title says. These tools are not supported, but suggestions, tips, fixes!,
 Current Python Version;
 
 	python --version
-	Python 3.6.4 :: Anaconda custom (64-bit)
+	Python 3.7.3
 	
 For safety you can use a docker container (instructions below)	
 
@@ -31,6 +31,28 @@ Many of the tools in this section are built to further process csv files output 
 `TrakCare_Monitor.py`
 - Quickly process TrakCare Monitor Data to collate and visualise some interesting metrics. Source data must be exported from the TrakCare Monitor Tool using "ExportAll".
 
+### Pretty pButtons Charts
+
+The script `pretty_pButtons.py` uses the sqlite database that can be created using yape to create charts that can combine metrics for *Red Hat* (RHEL): vmstat iostat mgstat.
+For example, this is handy if you need to output charts for performance reports.
+There is also an option to output merged vmstat iostat and mgstat as a csv file for you to work within other ways.
+
+Formatting and chart creation is driven from two yml files, I have included samples;
+`pretty_pButtons_input.yml` - instance details such as name and key disks eg: /dev/sde is sde. Also formatting details similar to yape.
+`pretty_pButtons_chart.yml` - Attributes of charts to produce.
+
+The workflow is;
+
+0. Edit `pretty_pButtons_input.yml` and  `pretty_pButtons_chart.yml`. 
+Maybe run yape first to see what it is you want to look at at or deep dive in to.
+
+1. Create sqlite file using yape;
+`yape --filedb myfile.sqlite3 pButtonsHTMLfilename.html`
+
+2. Here is an example:
+`pretty_pButtons.py -f myfile.sqlite3 -s 10:00 -e 11:00 -p pretty_pButtons_input.yml -i -m -c pretty_pButtons_chart.yml -o ./pretty
+
+_*There is very little error checking in the script*_
 
 ## Build docker image to run Python scripts
 
