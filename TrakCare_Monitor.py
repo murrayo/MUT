@@ -24,6 +24,9 @@ import argparse
 
 import csv
 
+from pandas.plotting import register_matplotlib_converters
+register_matplotlib_converters()
+
 # Generic plot by date, single line, ticks on a Monday.
 
 def generic_plot(df, column, Title, yLabel, saveAs, pres=False, yzero=True, TextString="", Hours=False):
