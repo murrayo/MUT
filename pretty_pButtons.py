@@ -31,6 +31,9 @@ import sqlite3
 import logging
 from functools import reduce
 
+from pandas.plotting import register_matplotlib_converters
+register_matplotlib_converters()
+
 
 def smooth(y, box_pts):
     box = np.ones(box_pts)/box_pts
