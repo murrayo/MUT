@@ -272,14 +272,6 @@ def free_chart(df_master, plot_d, columns_to_show, TITLE, y_label_l, y_label_r, 
     ax1.grid(which='major', axis='both', linestyle='--')
     ax1.set_title(TITLE, fontsize=14)
 
-    markerL = ""
-    if plot_d["StyleL"] == "":
-        markerL = "o" 
-
-    # Defaults
-    if not "Linewidth" in plot_d:
-        plot_d["Linewidth"] = 2   
-
     # This where the left hand plot happens
     colour_count = 1
     for column_d in columns_to_show:
@@ -287,7 +279,7 @@ def free_chart(df_master, plot_d, columns_to_show, TITLE, y_label_l, y_label_r, 
             if df_master[column_d["Name"]].max() > 10:
                 axis_greater_than_10_left = True
             ax1.plot(df_master[column_d["Name"]], label=column_d["Text"], color=palette(
-                colour_count), alpha=0.5, linestyle=plot_d["StyleL"], linewidth=plot_d["Linewidth"], markersize=plot_d["Markersize"], marker=markerL)
+                colour_count), alpha=0.5, linestyle=column_d["Style"], linewidth=column_d["Linewidth"], markersize=column_d["Markersize"], marker=column_d["Markerstyle"])
             colour_count = colour_count + 1
 
     ax1.set_title(TITLE, fontsize=14)
@@ -320,17 +312,14 @@ def free_chart(df_master, plot_d, columns_to_show, TITLE, y_label_l, y_label_r, 
     ax1.legend(loc="upper left")
 
     if Right_axis_used:
-        #colour_count = 1
-        markerR = ""
-        if plot_d["StyleR"] == "":
-            markerR = "o"
+
         ax2 = ax1.twinx()
         for column_d in columns_to_show:
             if column_d["axis"] == "right":
                 if df_master[column_d["Name"]].max() > 10:
                     axis_greater_than_10_right = True
                 ax2.plot(df_master[column_d["Name"]], label=column_d["Text"], color=palette(
-                    colour_count), alpha=0.5, linestyle=plot_d["StyleR"], linewidth=plot_d["Linewidth"], markersize=plot_d["Markersize"], marker=markerR)
+                    colour_count), alpha=0.5, linestyle=column_d["Style"], linewidth=column_d["Linewidth"], markersize=column_d["Markersize"], marker=column_d["Markerstyle"])
                 colour_count = colour_count + 1
 
         ax2.set_ylabel(y_label_r, fontsize=10)
