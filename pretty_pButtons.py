@@ -477,7 +477,15 @@ def mainline(db_filename, zoom_start, zoom_end, plot_d, config, include_iostat_p
         dataframes = [df_master_db, df_master_Pri, df_master_WIJ]
         df_bigmerge = reduce(lambda left, right: pd.merge(
             left, right, on='datetime'), dataframes)
-        # No need to resample each iostat as they get the same date and time, but resample down to match vmstat and mgstat    
+        # No need to resample each iostat as they get the same date and time, but resample down to match vmstat and mgstat   
+        # 
+        # It is possible that you get duplicate rows in the index, I have seen this with iostat, which results in error;
+        # raise ValueError("cannot reindex from a duplicate axis")
+        # You can display them with:
+        # print(df_bigmerge[df_bigmerge.index.duplicated()])
+        # But I dont really care if there is the odd glitch, just remove them:
+        df_bigmerge = df_bigmerge[~df_bigmerge.index.duplicated()]
+
         df_bigmerge = df_bigmerge.reset_index().set_index('datetime').resample('1S').interpolate(method='linear')   
 
         dataframes = [df_bigmerge, df_master_mg, df_master_vm]
