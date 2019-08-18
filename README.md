@@ -176,15 +176,23 @@ In the example above columns plotted are:
 
 ### Sample pretty_pButtons charts
 
-Below is the example custom chart, Glorefs and vmstat, and a few of the included charts from the -m and -i flags. The last image is also a custom chart from the sample yml file.
+Below is the example custom chart, Glorefs and vmstat.
 
 ![](images/temp_Glorefs_and_vmstat_-_Sample_Wednesday_31_Jul_2019.png)
 
+Below is one of the default images from using the -m option. Note the default time period is 13:00 to 14:00.
+
 ![](images/temp_2019-07-31__Glorefs_1300_1400.png)
+
+Below is one of the default images from using the -i option.
 
 ![](images/temp_2019-07-31_Primary_Journal_Write_latency_(ms)_1300_1400.png)
 
+The last image here is another custom image included in the sample `pretty_pButtons_chart.yml` file.
+
 ![](images/temp_DB_Jnl_and_WIJ_Writes_latency_and_DB_Read_latency_1300_to_1400_-_Sample_Wednesday_31_Jul_2019.png)
+
+Now you can mix and match mgstat, iostat and vmstat :)
 
 <hr>
 
