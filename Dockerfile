@@ -1,6 +1,6 @@
 # Use official Python 3.6 from docker hub
 # So you know you are running the same version
-FROM python:3.6
+FROM python:3.7
 
 # Change to root of container
 WORKDIR .

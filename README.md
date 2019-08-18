@@ -202,17 +202,30 @@ Docker file is included, you must have docker installed already
 NOTE: the container is for Python scripts only, for example yape\_deep.sh cannot be run
 
 ```
-$ docker build -t mut .
+$ docker build --no-cache -t mut .
 ```
 Check exists
 
 ```
 $ docker image ls
-REPOSITORY          TAG                 IMAGE ID            CREATED              SIZE
-mut                 latest              e640c19160be        About a minute ago   1.1GB    
+REPOSITORY                        TAG                 IMAGE ID            CREATED              SIZE
+mut                               latest              a7b7acd6e319        16 seconds ago       1.16GB    
 ```
 
-Run a script with included sample data
+**Run pretty_pButtons using data already ouput by yape**
+
+Assumes the following are in the current working directory;
+- my\_yape.sqlite3
+- pretty\_pButtons_input.yml
+- pretty\_pButtons_chart.yml
+
+```
+$ docker run -v `pwd`:/data --rm --name muttly mut \
+./pretty_pButtons.py -f /data/my_yape.sqlite3  -p /data/pretty_pButtons_input.yml \
+-i -m -c /data/pretty_pButtons_chart.yml -o /data/pretty_docker -x
+```
+
+**Run a script with included sample data**
 
 ```
 $ docker run -v `pwd`/INPUT:/data  --rm --name muttly mut  \
