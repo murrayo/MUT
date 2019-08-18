@@ -32,6 +32,7 @@ Many of the tools in this section are built to further process csv files output 
 - Quickly process TrakCare Monitor Data to collate and visualise some interesting metrics. Source data must be exported from the TrakCare Monitor Tool using "ExportAll".
 
 <hr>
+
 ## Pretty pButtons Charts
 
 The script `pretty_pButtons.py` uses the sqlite database created when using [yape](https://github.com/murrayo/yape) to make charts that can combine metrics for **Red Hat** (RHEL): vmstat, iostat and mgstat.
@@ -73,7 +74,7 @@ To see all the options:
 
 `pretty_pButtons.py --help`
 
-###Notes on `pretty_pButtons_chart.yml`
+### Notes on `pretty_pButtons_chart.yml`
 
 The following example shows a chart description in yml format. The chart combines Glorefs from mgstat with Total CPU from vmstat.
 There can be as many chart descriptions as you want in a single .yml file.
@@ -103,13 +104,18 @@ _column#_ : This section, one per plot line, lists pairs of keys with attributes
 - _Linewidth_ : if a line style, the width.
 - _Markerstyle_ : if _Style_ is "" the [marker style](https://matplotlib.org/api/markers_api.html?highlight=marker%20style).
 - _Markersize_ : If marker is used the size.
+
 _zoom_ : if True, the chart x axis will limited to times specified in the command line time selection options `-s` and `-e`.
+
 _ylabel\_l_ : The left hand side y label.
+
 _ylabel\_r_ : The right hand side y label.
+
 _y\_max\_l_ : Maximum y axis left, e.g. 100 if you are showing %. 0 for max(). All charts start at 0. 
+
 _y\_max\_r_ : Maximum y axis right.
 
-###Notes on `pretty_pButtons_input.yml`
+### Notes on `pretty_pButtons_input.yml`
 
 The following example shows site specific and global chart attributes in yml format.
 
@@ -130,12 +136,19 @@ Moving Average: 60
 ```
 
 _Site Name_ : Is text that appears in the title of all charts, and is also used as part of the file name. 
+
 _Disk List_ : Section is unique to your site. Use the last part of the device name. e.g.: `/dev/sde` is `sde`, `/dev/dm-5` is `dm-5` etc. 
+
 _Colormap Name_ : Do not change
+
 _DPI_ : Chart dots per inch, 300 is print level quality, 80 is fine for screens.
+
 _WIDTH_ : Chart width in inches.
+
 _HEIGHT_ : Chart height in inches.
+
 _MEDIAN_ : Do not change.
+
 _Moving Average_ : Do not change.
 
 <hr>
