@@ -74,47 +74,6 @@ To see all the options:
 
 `pretty_pButtons.py --help`
 
-### Notes on `pretty_pButtons_chart.yml`
-
-The following example shows a chart description in yml format. The chart combines Glorefs from mgstat with Total CPU from vmstat.
-There can be as many chart descriptions as you want in a single .yml file.
-
-```
-Glorefs and vmstat:  
-    Title: "Glorefs and vmstat"
-    columns_to_show:
-        column1: {"Text": "Glorefs", "Name": "Glorefs_mg", "axis": "left", "Style": "-", "Linewidth": 2, "Markerstyle": "", "Markersize": 1 }
-        column2: {"Text": "Total CPU", "Name": "Total CPU_vm", "axis": "right", "Style": "", "Linewidth": 2, "Markerstyle": "+", "Markersize": 3 }   
-    zoom: False
-    y_label_l: "Global references/sec"
-    y_label_r: "Total CPU utilisation %"  
-    y_max_l: 0
-    y_max_r: 100           
-```    
-
-_Title_ : text appears in the title area of the chart, and is also used as part of the file name. 
-
-_Columns to show_ : section lists each plot line, there is no hard limit on the number of lines. 
-
-_column#_ : This section, one per plot line, lists pairs of keys with attributes. Attributes are:
-- _Text_ : Legend for the plot line.
-- _Name_ : Column name from the sqlite database.
-- _axis_ : y axis; left or right
-- _Style_ : blank ("") if a marker, eg a dot or triangle etc will be used, else one of these [Styles](https://matplotlib.org/gallery/lines_bars_and_markers/line_styles_reference.html).
-- _Linewidth_ : if a line style, the width.
-- _Markerstyle_ : if _Style_ is "" the [marker style](https://matplotlib.org/api/markers_api.html?highlight=marker%20style).
-- _Markersize_ : If marker is used the size.
-
-_zoom_ : if True, the chart x axis will limited to times specified in the command line time selection options `-s` and `-e`.
-
-_ylabel\_l_ : The left hand side y label.
-
-_ylabel\_r_ : The right hand side y label.
-
-_y\_max\_l_ : Maximum y axis left, e.g. 100 if you are showing %. 0 for max(). All charts start at 0. 
-
-_y\_max\_r_ : Maximum y axis right.
-
 ### Notes on `pretty_pButtons_input.yml`
 
 The following example shows site specific and global chart attributes in yml format.
@@ -150,6 +109,68 @@ _HEIGHT_ : Chart height in inches.
 _MEDIAN_ : Do not change.
 
 _Moving Average_ : Do not change.
+
+### Notes on `pretty_pButtons_chart.yml`
+
+The following example shows a chart description in yml format. The chart combines Glorefs from mgstat with Total CPU from vmstat.
+There can be as many chart descriptions as you want in a single .yml file.
+
+```
+Glorefs and vmstat:  
+    Title: "Glorefs and vmstat"
+    columns_to_show:
+        column1: {"Text": "Glorefs", "Name": "Glorefs_mg", "axis": "left", "Style": "-", "Linewidth": 2, "Markerstyle": "", "Markersize": 1 }
+        column2: {"Text": "Total CPU", "Name": "Total CPU_vm", "axis": "right", "Style": "", "Linewidth": 2, "Markerstyle": "+", "Markersize": 3 }   
+    zoom: False
+    y_label_l: "Global references/sec"
+    y_label_r: "Total CPU utilisation %"  
+    y_max_l: 0
+    y_max_r: 100           
+```    
+
+_Title_ : text appears in the title area of the chart, and is also used as part of the file name. 
+
+_Columns to show_ : section lists each plot line, there is no hard limit on the number of lines (see **Column names** below). 
+
+_column#_ : This section, one per plot line, lists pairs of keys with attributes. Attributes are:
+- _Text_ : Legend for the plot line.
+- _Name_ : Column name from the sqlite database.
+- _axis_ : y axis; left or right
+- _Style_ : blank ("") if a marker, eg a dot or triangle etc will be used, else one of these [Styles](https://matplotlib.org/gallery/lines_bars_and_markers/line_styles_reference.html).
+- _Linewidth_ : if a line style, the width.
+- _Markerstyle_ : if _Style_ is "" the [marker style](https://matplotlib.org/api/markers_api.html?highlight=marker%20style).
+- _Markersize_ : If marker is used the size.
+
+_zoom_ : if True, the chart x axis will limited to times specified in the command line time selection options `-s` and `-e`.
+
+_ylabel\_l_ : The left hand side y label.
+
+_ylabel\_r_ : The right hand side y label.
+
+_y\_max\_l_ : Maximum y axis left, e.g. 100 if you are showing %. 0 for max(). All charts start at 0. 
+
+_y\_max\_r_ : Maximum y axis right.
+
+**Column names**
+
+Column names are derived from **\_mg**stat, **\_vm**stat, and the disk types in `pretty_pButtons_input.yml`, for example;
+
+- **\_db** is  Database metrics columns.
+- **\_pri** is Primary journal metrics.
+- **\_wij** is WIJ metrics.
+- **\_mg** is mgstat.
+- **\_vm** is vmstat.
+  
+The full list is:
+
+```
+datetime,rrqm/s_db,wrqm/s_db,r/s_db,w/s_db,rkB/s_db,wkB/s_db,avgrq-sz_db,avgqu-sz_db,await_db,r_await_db,w_await_db,svctm_db,%util_db,rrqm/s_pri,wrqm/s_pri,r/s_pri,w/s_pri,rkB/s_pri,wkB/s_pri,avgrq-sz_pri,avgqu-sz_pri,await_pri,r_await_pri,w_await_pri,svctm_pri,%util_pri,rrqm/s_wij,wrqm/s_wij,r/s_wij,w/s_wij,rkB/s_wij,wkB/s_wij,avgrq-sz_wij,avgqu-sz_wij,await_wij,r_await_wij,w_await_wij,svctm_wij,%util_wij,Glorefs_mg,RemGrefs_mg,GRratio_mg,PhyRds_mg,Rdratio_mg,Gloupds_mg,RemGupds_mg,Rourefs_mg,RemRrefs_mg,RouLaS_mg,RemRLaS_mg,PhyWrs_mg,WDQsz_mg,WDtmpq_mg,WDphase_mg,WIJwri_mg,RouCMs_mg,Jrnwrts_mg,ActECP_mg,Addblk_mg,PrgBufL_mg,PrgSrvR_mg,BytSnt_mg,BytRcd_mg,WDpass_mg,IJUcnt_mg,IJULock_mg,PPGrefs_mg,PPGupds_mg,r_vm,b_vm,swpd_vm,free_vm,buff_vm,cache_vm,si_vm,so_vm,bi_vm,bo_vm,in_vm,cs_vm,us_vm,sy_vm,id_vm,wa_vm,st_vm,Total CPU_vm
+```
+
+In the example above columns plotted are:
+
+- "Glorefs\_mg" (Glorefs from mgstat)
+- "Total CPU\_vm" (Total CPU from vmstat)
 
 <hr>
 
