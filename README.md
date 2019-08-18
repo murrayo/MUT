@@ -31,38 +31,114 @@ Many of the tools in this section are built to further process csv files output 
 `TrakCare_Monitor.py`
 - Quickly process TrakCare Monitor Data to collate and visualise some interesting metrics. Source data must be exported from the TrakCare Monitor Tool using "ExportAll".
 
-### Pretty pButtons Charts
+<hr>
+## Pretty pButtons Charts
 
-The script `pretty_pButtons.py` uses the sqlite database created using yape to make charts that can combine metrics for **Red Hat** (RHEL): vmstat, iostat and mgstat.
-For example, this is handy if you need to output charts for performance reports. This is a preview, working towards an interactive solution.
+The script `pretty_pButtons.py` uses the sqlite database created when using [yape](https://github.com/murrayo/yape) to make charts that can combine metrics for **Red Hat** (RHEL): vmstat, iostat and mgstat.
+For example, this is handy if you need to output charts for performance reports. This is a preview of the functionality, working towards an interactive solution.
 
-There is also an option to output merged vmstat, iostat and mgstat as a csv file for you to work within other ways.
+There is also an option to output merged vmstat, iostat and mgstat as a csv file for you to work with in other ways.
 
 Formatting and chart creation is driven from two yml files, I have included samples;
 
-`pretty_pButtons_input.yml` - instance details such as name and key disks eg: /dev/sde is sde. Also formatting details similar to yape.
-
-`pretty_pButtons_chart.yml` - Attributes of charts to produce.
+- `pretty_pButtons_input.yml` - instance details such as name and key disks,
+- `pretty_pButtons_chart.yml` - Attributes of charts to produce.
 
 The workflow is;
 
-0. Edit `pretty_pButtons_input.yml` and  `pretty_pButtons_chart.yml`. 
+**A. Create sqlite file using [yape](https://github.com/murrayo/yape)**
 
-Maybe run yape first with default plots to see what it is you want to look at at or deep dive in to.
+Hint: use default plots to see what it is you want to look at at or deep dive in to.
 
-You will need the disk /dev names for Database, Primary and Alternate Journal, WIJ, and Caché/IRIS disk. They can all be the same.
+`yape --mgstat --vmstat --iostat --filedb myfile.sqlite3 pButtonsHTMLfilename.html`
 
-`yape --mgstat --vmstat --iostat pButtonsHTMLfilename.html`
-
-1. Create sqlite file using yape;
+If you already know what columns you care about, you can simply run yape to only create the sqlite file.
 
 `yape --filedb myfile.sqlite3 pButtonsHTMLfilename.html`
 
-2. Here is an example:
+**B. Edit `pretty_pButtons_input.yml` and  `pretty_pButtons_chart.yml`** 
+
+You will need the disk /dev names for Database, Primary and Alternate Journal, WIJ, and Caché/IRIS disk. They can all be the same device if that is how you system is set up. 
+See the notes below for changing the defaults for `pretty_pButtons_chart.yml`.
+
+**C. Run the script**
+
+Here is an example using optional flags to start the zoom charts at 10:00 and end at 11:00:
 
 `pretty_pButtons.py -f myfile.sqlite3 -s 10:00 -e 11:00 -p pretty_pButtons_input.yml -i -m -c pretty_pButtons_chart.yml -o ./pretty`
 
-_**There is very little error checking in the script**_
+_**NOTE: There is very little error checking in the script**_
+
+To see all the options:
+
+`pretty_pButtons.py --help`
+
+###Notes on `pretty_pButtons_chart.yml`
+
+The following example shows a chart description in yml format. The chart combines Glorefs from mgstat with Total CPU from vmstat.
+There can be as many chart descriptions as you want in a single .yml file.
+
+```
+Glorefs and vmstat:  
+    Title: "Glorefs and vmstat"
+    columns_to_show:
+        column1: {"Text": "Glorefs", "Name": "Glorefs_mg", "axis": "left", "Style": "-", "Linewidth": 2, "Markerstyle": "", "Markersize": 1 }
+        column2: {"Text": "Total CPU", "Name": "Total CPU_vm", "axis": "right", "Style": "", "Linewidth": 2, "Markerstyle": "+", "Markersize": 3 }   
+    zoom: False
+    y_label_l: "Global references/sec"
+    y_label_r: "Total CPU utilisation %"  
+    y_max_l: 0
+    y_max_r: 100           
+```    
+
+_Title_ : text appears in the title area of the chart, and is also used as part of the file name. 
+
+_Columns to show_ : section lists each plot line, there is no hard limit on the number of lines. 
+
+_column#_ : This section, one per plot line, lists pairs of keys with attributes. Attributes are:
+- _Text_ : Legend for the plot line.
+- _Name_ : Column name from the sqlite database.
+- _axis_ : y axis; left or right
+- _Style_ : blank ("") if a marker, eg a dot or triangle etc will be used, else one of these [Styles](https://matplotlib.org/gallery/lines_bars_and_markers/line_styles_reference.html).
+- _Linewidth_ : if a line style, the width.
+- _Markerstyle_ : if _Style_ is "" the [marker style](https://matplotlib.org/api/markers_api.html?highlight=marker%20style).
+- _Markersize_ : If marker is used the size.
+_zoom_ : if True, the chart x axis will limited to times specified in the command line time selection options `-s` and `-e`.
+_ylabel\_l_ : The left hand side y label.
+_ylabel\_r_ : The right hand side y label.
+_y\_max\_l_ : Maximum y axis left, e.g. 100 if you are showing %. 0 for max(). All charts start at 0. 
+_y\_max\_r_ : Maximum y axis right.
+
+###Notes on `pretty_pButtons_input.yml`
+
+The following example shows site specific and global chart attributes in yml format.
+
+```
+Site Name: "- Customer Name"
+Disk List:
+    Database: "sdd"
+    Primary Journal: "sdj1"
+    Alternate Journal: "sdk1"
+    WIJ: "sdb1"
+    IRIS: "dm-7"
+Colormap Name: "Set1"
+DPI: 300
+WIDTH: 16
+HEIGHT: 6
+MEDIAN: False
+Moving Average: 60
+```
+
+_Site Name_ : Is text that appears in the title of all charts, and is also used as part of the file name. 
+_Disk List_ : Section is unique to your site. Use the last part of the device name. e.g.: `/dev/sde` is `sde`, `/dev/dm-5` is `dm-5` etc. 
+_Colormap Name_ : Do not change
+_DPI_ : Chart dots per inch, 300 is print level quality, 80 is fine for screens.
+_WIDTH_ : Chart width in inches.
+_HEIGHT_ : Chart height in inches.
+_MEDIAN_ : Do not change.
+_Moving Average_ : Do not change.
+
+<hr>
 
 ## Build docker image to run Python scripts
 
