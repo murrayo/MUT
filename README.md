@@ -180,11 +180,11 @@ Below is the example custom chart, Glorefs and vmstat, and a few of the included
 
 ![](images/temp_Glorefs_and_vmstat_-_Sample_Wednesday_31_Jul_2019.png)
 
-![](temp_2019-07-31__Glorefs_1300_1400.png)
+![](images/temp_2019-07-31__Glorefs_1300_1400.png)
 
-![](temp_2019-07-31_Primary_Journal_Write_latency_(ms)_1300_1400.png)
+![](images/temp_2019-07-31_Primary_Journal_Write_latency_(ms)_1300_1400.png)
 
-![](temp_DB_Jnl_and_WIJ_Writes_latency_and_DB_Read_latency_1300_to_1400_-_Sample_Wednesday_31_Jul_2019.png)
+![](images/temp_DB_Jnl_and_WIJ_Writes_latency_and_DB_Read_latency_1300_to_1400_-_Sample_Wednesday_31_Jul_2019.png)
 
 <hr>
 
