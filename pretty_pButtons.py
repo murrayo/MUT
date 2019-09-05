@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Create a set of useful charts from pButtons Linux csv files
+# Create a set of useful charts from Linux pButtons SQLite3 files
 
 # example:
 # pretty_pButtons.py -f "`pwd`/ufh_after_upgrade.sqlite3" -p ../pretty_pButtons_input_after.yml  -c ../pretty_pButtons_chart.yml -i
@@ -274,18 +274,40 @@ def free_chart(df_master, plot_d, columns_to_show, TITLE, y_label_l, y_label_r, 
 
     # This where the left hand plot happens
     colour_count = 1
+
+    YAxisMaxL = 0
+    YAxisMaxR = 0
+
     for column_d in columns_to_show:
+
         if column_d["axis"] == "left":
-            if df_master[column_d["Name"]].max() > 10:
-                axis_greater_than_10_left = True
+            if plot_d["limit_yaxis"] and y_max_l == 0 :
+                # To remove outliers from chart limit x axis to 3 sigma
+                YAxis3Sigma = df_master[column_d["Name"]].mean() + 3 * df_master[column_d["Name"]].std()
+                if YAxis3Sigma > YAxisMaxL:
+                    YAxisMaxL = YAxis3Sigma
+                if YAxisMaxL > 10:
+                    axis_greater_than_10_left = True
+            else :    
+                if df_master[column_d["Name"]].max() > 10:
+                    axis_greater_than_10_left = True
+
             ax1.plot(df_master[column_d["Name"]], label=column_d["Text"], color=palette(
                 colour_count), alpha=0.5, linestyle=column_d["Style"], linewidth=column_d["Linewidth"], markersize=column_d["Markersize"], marker=column_d["Markerstyle"])
             colour_count = colour_count + 1
 
-    ax1.set_title(TITLE, fontsize=14)
+    if plot_d["limit_yaxis"]:
+        ax1.set_title("3 Sigma " + TITLE, fontsize=14)
+    else:
+        ax1.set_title(TITLE, fontsize=14)
+
     ax1.set_ylabel(y_label_l, fontsize=10)
     ax1.tick_params(labelsize=10)
     ax1.set_ylim(bottom=0)  # Always zero start
+
+    if plot_d["limit_yaxis"] and y_max_l == 0 :
+        y_max_l = YAxisMaxL
+
     if y_max_l > 0:
         ax1.set_ylim(top=y_max_l)    
     if axis_greater_than_10_left:
@@ -316,8 +338,17 @@ def free_chart(df_master, plot_d, columns_to_show, TITLE, y_label_l, y_label_r, 
         ax2 = ax1.twinx()
         for column_d in columns_to_show:
             if column_d["axis"] == "right":
-                if df_master[column_d["Name"]].max() > 10:
-                    axis_greater_than_10_right = True
+                if plot_d["limit_yaxis"] and y_max_r == 0 :
+                    # To remove outliers from chart limit x axis to 3 sigma
+                    YAxis3Sigma = df_master[column_d["Name"]].mean() + 3 * df_master[column_d["Name"]].std()
+                    if YAxis3Sigma > YAxisMaxR:
+                        YAxisMaxR = YAxis3Sigma
+                    if YAxisMaxR > 10:
+                        axis_greater_than_10_right = True
+                else :    
+                    if df_master[column_d["Name"]].max() > 10:
+                        axis_greater_than_10_right = True
+
                 ax2.plot(df_master[column_d["Name"]], label=column_d["Text"], color=palette(
                     colour_count), alpha=0.5, linestyle=column_d["Style"], linewidth=column_d["Linewidth"], markersize=column_d["Markersize"], marker=column_d["Markerstyle"])
                 colour_count = colour_count + 1
@@ -325,6 +356,10 @@ def free_chart(df_master, plot_d, columns_to_show, TITLE, y_label_l, y_label_r, 
         ax2.set_ylabel(y_label_r, fontsize=10)
         ax2.tick_params(labelsize=10)
         ax2.set_ylim(bottom=0)  # Always zero start
+
+        if plot_d["limit_yaxis"] and y_max_r == 0 :
+            y_max_r = YAxisMaxR
+
         if y_max_r > 0:
             ax2.set_ylim(top=y_max_r)        
         if axis_greater_than_10_right:
@@ -585,6 +620,8 @@ if __name__ == '__main__':
                         help="Chart file definitions", required=False)                     
     parser.add_argument("-o", "--output_dir",
                         help="override output directory", required=False)
+    parser.add_argument("-l", "--limit_yaxis",
+                        help="limit y axis to 3 sigma maximum", required=False, action="store_true")                    
 
     args = parser.parse_args()
 
@@ -632,6 +669,7 @@ if __name__ == '__main__':
 
     # Set some constants
     plot_d["output csv"] = args.output_csv_file
+    plot_d["limit_yaxis"] = args.limit_yaxis
 
     plot_d['ZOOM_TITLE'] = zoom_start.replace(":", "")+" to "+zoom_end.replace(":", "")
     plot_d['ZOOM_TO'] = zoom_start.replace(":", "")+"_"+zoom_end.replace(":", "")
